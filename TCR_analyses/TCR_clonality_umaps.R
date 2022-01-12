@@ -8,35 +8,28 @@ foldersList = c("",
   "",
   "")
 integrated_name_arr = c("reannotate_ribas_melanoma_merged_tcells","reannotate_uveal_melanoma_tcells_reintegrated_with_1_subclustered_dim_num_25_then_15","fresh_vs_frozen_tcells_reannotate_BI5","fresh_vs_frozen_tcells_reannotate_cpoi-uvealprimarydata")
-for (i in 3:4) {
+dataset_names = c("ribas","UMEL","BI5","UM")
+for (i in 1:4) {
   seu = readRDS(paste0("/data/",integrated_name_arr[i],".rds"))
   DefaultAssay(seu) = "RNA"
 
-  if (i==1)
+  if (dataset_names[i]=="ribas")
   {
     seu = subset(seu, seurat_clusters %in% c(0,1,2,3,4,6,7,9,10,11,12,14))
-    seu$orig.ident[seu$orig.ident=="ribas_310_on"] = "ribas1_on_tcr_S36_L004"
-    seu$orig.ident[seu$orig.ident=="ribas_310_on_later"] = "ribas_310_on_later_previd_3_TCR"
-    seu$orig.ident[seu$orig.ident=="ribas_310_pre"] = "ribas1_pre_tcr_S35_L004"
   }
-  else if (i==2)
+  else if (dataset_names[i]=="UMEL")
   {
     seu = subset(seu, seurat_clusters %in% c("0","1_CD8","4","6","8"))
   }
-  else if (i==3)
+  else if (dataset_names[i]=="BI5")
   {
     seu = subset(seu, orig.ident %in% c("CD45pos","5snseq"))
-    seu$orig.ident[seu$orig.ident=="CD45pos"] = "TCRBI5_S1_L001"
-    seu$orig.ident[seu$orig.ident=="5snseq"] = "bi005-skcm-5snseq-TCR"
   }
-  else
+  else if (dataset_names[i]=="UM")
   {
-    seu$orig.ident[seu$orig.ident=="SCRNA-5P-NA-E12"] = "UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-TCR-F2"
-    seu$orig.ident[seu$orig.ident=="SCRNA-5P-NA-F1"] = "UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-TCR-F3"
-    seu$orig.ident[seu$orig.ident=="SNRNA-5P-WI-F12"] = "UMEL-CUUM1-SNRNA-5P-WI-PRIMARY-TCR-F9"
   }
 
-  if (i==1 || i==2)
+  if (dataset_names[i]=="ribas" || dataset_names[i]=="UMEL")
   {
     dim_num = 15
 
@@ -48,19 +41,8 @@ for (i in 3:4) {
     seu <- RunUMAP(object = seu, dims = 1:dim_num)
   }
 
-  seu$barebarcodes = unlist(lapply(strsplit(colnames(seu),"_"), function(x) {x[1]}))
-
-  unique_idents = unique(seu$orig.ident)
-  seu$clonality = 0
-  for (i1 in 1:length(unique_idents))
-  {
-    csv_table = read.table(paste0(unique_idents[i1],"_TR_frequency.csv"),sep=",",header=T,quote=NULL)
-    for (j in 1:length(csv_table$barcodes))
-    {
-      barcodes = unique(str_split(csv_table$barcodes[j],"\\|")[[1]])
-      seu$clonality[(seu$barebarcodes %in% barcodes) & (seu$orig.ident==unique_idents[i1])] = length(barcodes)
-    }
-  }
+  source("assign_TCR_clonality.R")
+  seu = assign_TCR_clonality(seu, dataset_names[i])
 
   highlight_list = list()
   clone_numbers = sort(unique(seu$clonality))
@@ -80,37 +62,6 @@ for (i in 3:4) {
     }
     names(highlight_list) = paste0("Clonality: ", display_numbers)
   }
-
-  if (i==2 || i==3)
-  {
-    # if (i==2)
-    # {
-    #   seu_reannotate = readRDS("/data/fresh_vs_frozen_tcells_reannotate_BI5.rds")
-    # }
-    # if (i==3)
-    # {
-    #   seu_reannotate = readRDS("/data/fresh_vs_frozen_tcells_reannotate_cpoi-uvealprimarydata.rds")
-    # }
-    
-    # seu_reannotate$barebarcodes = unlist(lapply(strsplit(colnames(seu_reannotate),"_"), function(x) {x[1]}))
-    # seu_reannotate$manual_annotation_label_tcell
-  }
-
-  if (i==1 || i==2)
-  {
-    seu$clonality_group = "Unmatched with TCR sequencing"
-  }
-  if (i==3 || i==4)
-  {
-    seu$clonality_group = "Unmatched with TCR sequencing"
-    seu$clonality_group[seu$clonality==0 & seu$manual_annotation_label_tcell=="CD4+ T-cells"] = "CD4+ T-cells unmatched with TCR sequencing"
-    seu$clonality_group[seu$clonality==0 & seu$manual_annotation_label_tcell=="CD8+ T-cells"] = "CD8+ T-cells unmatched with TCR sequencing"
-  }
-  seu$clonality_group[seu$clonality==1] = "Unexpanded clones"
-  seu$clonality_group[seu$clonality==2] = "Expanded clones with clonality 2"
-  seu$clonality_group[seu$clonality>2 & seu$clonality<=5] = "Expanded clones with clonality > 2 and <= 5"
-  seu$clonality_group[seu$clonality>5 & seu$clonality<=20] = "Expanded clones with clonality > 5 and <= 20"
-  seu$clonality_group[seu$clonality>20] = "Expanded clones with clonality > 20"
 
   unique_clonality_groups = unique(seu$clonality_group)
   highlight_list = list()

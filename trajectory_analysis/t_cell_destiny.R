@@ -10,8 +10,6 @@ library(stringr)
 library(rlist)
 library(scRepertoire)
 
-# colBP <- c('#A80D11', '#008DB8')
-# colSCSN <- c('#E1AC24', '#288F56')
 colDC <- c('#DE8C00', '#F564E3', '#7CAE00', '#00B4F0', '#00C08B')
 
 prefix_arr = c("cd8")#"treg_and_tfh","treg","tfh","cd4")#,"cd8")
@@ -32,14 +30,6 @@ for (i in 1:length(prefix_arr))
   else
   {
     pdf(paste0("uveal_melanoma_",prefix_arr[i],"_destiny_trajectory.pdf"),height=8,width=8)
-  }
-  if (prefix_arr[i]=="cd8")
-  {
-    #pushViewport(viewport(layout = grid.layout(11,10)))
-  }
-  else
-  {
-    #pushViewport(viewport(layout = grid.layout(13,9)))
   }
   vplayout = function(x, y) viewport(layout.pos.row = x, layout.pos.col = y)
 
@@ -97,6 +87,7 @@ for (i in 1:length(prefix_arr))
     tempdf = data.frame(Terminal.exhaustion="",Precursor.exhaustion="")
     azizi_signatures_tcell_exhaustion = rbind(azizi_signatures_tcell_exhaustion, tempdf)
   }
+
   azizi_signatures$G1.S = NULL
   azizi_signatures$G2.M = NULL
   azizi_signatures$M1.Macrophage.Polarization = NULL
@@ -109,6 +100,7 @@ for (i in 1:length(prefix_arr))
   }
   azizi_signatures[["just_TOX"]] = c("TOX",rep("",dim(azizi_signatures)[1]-1))
   azizi_signatures[["just_TCF7"]] = c("TCF7",rep("",dim(azizi_signatures)[1]-1))
+
   for (j in 1:length(names(azizi_signatures)))
   {
     seu = AddModuleScore(seu, features = list(na.omit(azizi_signatures[[names(azizi_signatures)[j]]])), name = names(azizi_signatures)[j], assay = "RNA", search = T)
@@ -144,7 +136,6 @@ for (i in 1:length(prefix_arr))
     {
       seu@assays$RNA@counts[rev_genenames[k],] = -seu@assays$RNA@counts[rev_genenames[k],]
       seu@assays$RNA@data[rev_genenames[k],] = -seu@assays$RNA@data[rev_genenames[k],]
-      #seu@assays$RNA@scale.data[rev_genenames[k],] = -seu@assays$RNA@scale.data[rev_genenames[k],]
     }
 
     seu = AddModuleScore(seu, features = list(na.omit(sig_genenames)), name = names(diff_sigs)[j], assay = "RNA", search = T)
@@ -153,7 +144,6 @@ for (i in 1:length(prefix_arr))
     {
       seu@assays$RNA@counts[rev_genenames[k],] = -seu@assays$RNA@counts[rev_genenames[k],]
       seu@assays$RNA@data[rev_genenames[k],] = -seu@assays$RNA@data[rev_genenames[k],]
-      #seu@assays$RNA@scale.data[rev_genenames[k],] = -seu@assays$RNA@scale.data[rev_genenames[k],]
     }
 
     azizi_signatures[[names(diff_sigs[j])]] = c(sig_genenames,rep("",dim(azizi_signatures)[1]-length(sig_genenames)))
@@ -183,9 +173,6 @@ for (i in 1:length(prefix_arr))
     figurecount = figurecount+1
   }
 
-  # #seu = subset(seu, G2M.Score<.03 & S.Score<.3)
-  # #seu = subset(seu, G2M.Score<.25 & S.Score<.5)
-
   seu$original_seurat_clusters = seu$seurat_clusters
   seu = ScaleData(object = seu)
   seu = RunPCA(object = seu)
@@ -198,25 +185,8 @@ for (i in 1:length(prefix_arr))
 
   if (prefix_arr[i]=="cd8")
   {
-    seu$barebarcodes = unlist(lapply(strsplit(colnames(seu),"_"), function(x) {x[1]}))
-
-    if (useRibas)
-    {
-      seu$orig.ident[seu$orig.ident=="ribas_310_on"] = "ribas1_on_tcr_S36_L004"
-      seu$orig.ident[seu$orig.ident=="ribas_310_on_later"] = "ribas_310_on_later_previd_3_TCR"
-      seu$orig.ident[seu$orig.ident=="ribas_310_pre"] = "ribas1_pre_tcr_S35_L004"
-    }
-    unique_idents = unique(seu$orig.ident)
-    seu$clonality = 0
-    for (i1 in 1:length(unique_idents))
-    {
-      csv_table = read.table(paste0(unique_idents[i1],"_TR_frequency.csv"),sep=",",header=T,quote=NULL)
-      for (j in 1:length(csv_table$barcodes))
-      {
-  	barcodes = unique(str_split(csv_table$barcodes[j],"\\|")[[1]])
-  	seu$clonality[(seu$barebarcodes %in% barcodes) & (seu$orig.ident==unique_idents[i1])] = length(barcodes)
-      }
-    }
+    source("assign_TCR_clonality.R")
+    seu = assign_TCR_clonality(seu, dataset_names[i])
 
     highlight_list = list()
     clone_numbers = sort(unique(seu$clonality))
@@ -237,15 +207,13 @@ for (i in 1:length(prefix_arr))
       names(highlight_list) = paste0("Clonality: ", display_numbers)
     }
 
-    seu$clonality_group = "Unmatched with TCR sequencing"
-    seu$clonality_group[seu$clonality==1] = "Unexpanded clones"
-    seu$clonality_group[seu$clonality==2] = "Expanded clones with clonality 2"
-    seu$clonality_group[seu$clonality>2 & seu$clonality<=5] = "Expanded clones with clonality > 2 and <= 5"
-    seu$clonality_group[seu$clonality>5 & seu$clonality<=20] = "Expanded clones with clonality > 5 and <= 20"
-    seu$clonality_group[seu$clonality>20] = "Expanded clones with clonality > 20"
-
-    highlight_list = list(colnames(seu)[seu$clonality_group=="Unmatched with TCR sequencing"],colnames(seu)[seu$clonality_group=="Unexpanded clones"],colnames(seu)[seu$clonality_group=="Expanded clones with clonality 2"],colnames(seu)[seu$clonality_group=="Expanded clones with clonality > 2 and <= 5"],colnames(seu)[seu$clonality_group=="Expanded clones with clonality > 5 and <= 20"],colnames(seu)[seu$clonality_group=="Expanded clones with clonality > 20"])
-    names(highlight_list) = c("Unmatched with TCR sequencing","Unexpanded clones","Expanded clones with clonality 2","Expanded clones with clonality > 2 and <= 5","Expanded clones with clonality > 5 and <= 20","Expanded clones with clonality > 20")
+    unique_clonality_groups = unique(seu$clonality_group)
+    highlight_list = list()
+    for (agroup in unique_clonality_groups)
+    {
+      highlight_list = list.append(highlight_list, colnames(seu)[seu$clonality_group==agroup])
+    }
+    names(highlight_list) = unique_clonality_groups
 
     seu$orig.ident[seu$orig.ident=="ribas1_on_tcr_S36_L004"] = "ribas_310_on"
     seu$orig.ident[seu$orig.ident=="ribas_310_on_later_previd_3_TCR"] = "ribas_310_on_later"
@@ -306,6 +274,8 @@ for (i in 1:length(prefix_arr))
   top_diff_names = union(names(sort(table(combined[[1]]$CTgene),decreasing=T)),names(sort(table(combined[[2]]$CTgene),decreasing=T))[1:20])
   top_diff_names = union(top_diff_names,names(sort(table(combined[[3]]$CTgene),decreasing=T))[1:20])
 
+  qc_titles = c()
+  qc_fields = c()
   if (prefix_arr[i]=="cd8")
   {
     par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
@@ -363,78 +333,25 @@ for (i in 1:length(prefix_arr))
     figurecount = figurecount+1
   }
 
-  nfeature_thresh = quantile(seu$nFeature_RNA,.95)
-  ncount_thresh = quantile(seu$nCount_RNA,.95)
-  percentmt_thresh = quantile(seu$percent.mt,.95)
-  scrubdoublet_thresh = quantile(seu$ScrubDoublet_score,.95)
-  # seu = subset(seu, nFeature_RNA<nfeature_thresh & nCount_RNA<ncount_thresh & percent.mt<percentmt_thresh & ScrubDoublet_score<scrubdoublet_thresh)
-
-  # seu = ScaleData(object = seu)
-  # seu = RunPCA(object = seu)
-  # seu = FindNeighbors(seu, dims = 1:15)
-  # seu = FindClusters(seu)
-  # seu = RunUMAP(object = seu, dims = 1:20)
-
-  # seu = FindVariableFeatures(seu, selection.method = "vst", nfeatures = 2000)
-  # if (prefix_arr[i]=="cd8")
-  # {
-  #   datamat = seu@assays$RNA@data[seu@assays$RNA@var.features,]
-  # }
-  # else
-  # {
-  #   datamat = seu@assays$integrated@data
-  # }
-
-  # es <- as.ExpressionSet(as.data.frame(t(as.matrix(datamat))))
-  # es@phenoData@data <- seu@meta.data
-  # dm <- DiffusionMap(es, verbose = T, n_pcs = 30)
-
-  seu$DC1 = dm$DC1
-  seu$DC2 = dm$DC2
-  seu$DC3 = dm$DC3
-  seu$DC4 = dm$DC4
-  seu$DC5 = dm$DC5
-  seu$DC6 = dm$DC6
-  seu$DC7 = dm$DC7
-  seu$DC8 = dm$DC8
-  seu$DC9 = dm$DC9
-  seu$DC10 = dm$DC10
+  for(dcidx = 1:10)
+  {
+    seu$DC1 = dm$DC1
+  }
 
   if (prefix_arr[i]=="cd8")
   {
-    print(FeaturePlot(seu, features = c("DC1"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC1")))
-    print(FeaturePlot(seu, features = c("DC2"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC2")))
-    print(FeaturePlot(seu, features = c("DC3"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC3")))
-    print(FeaturePlot(seu, features = c("DC4"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC4")))
-    print(FeaturePlot(seu, features = c("DC5"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC5")))
-    print(FeaturePlot(seu, features = c("DC6"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC6")))
-    print(FeaturePlot(seu, features = c("DC7"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC7")))
-    print(FeaturePlot(seu, features = c("DC8"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC8")))
-    print(FeaturePlot(seu, features = c("DC9"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC9")))
-    print(FeaturePlot(seu, features = c("DC10"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC10")))
+    for (dcidx in 1:10)
+    {
+      print(FeaturePlot(seu, features = c(paste0("DC",dcidx)), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC",dcidx)))
+    }
   }
   else
   {
-    print(FeaturePlot(seu, features = c("DC1"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC1")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC2"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC2")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC3"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC3")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC4"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC4")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC5"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC5")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC6"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC6")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC7"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC7")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC8"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC8")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC9"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC9")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-    print(FeaturePlot(seu, features = c("DC10"), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC10")), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
+    for (dcidx in 1:10)
+    {
+      print(FeaturePlot(seu, features = c(paste0("DC",dcidx)), min.cutoff = "q9", max.cutoff = "q90") + ggtitle(paste0(prefix_arr[i]," DC",dcidx)), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
+      figurecount = figurecount+1
+    }
   }
 
   rownum = floor((figurecount-1)/9)+1
@@ -461,6 +378,7 @@ for (i in 1:length(prefix_arr))
     }
     par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
     palette(viridis(100))
+
     testres1 = cor.test(seu$DC1, seu[[paste0(names(azizi_signatures)[j],"1")]][[1]],method="spearman")
     test_pval1 = round(testres1$p.val,8)
     testres2 = cor.test(seu$DC2, seu[[paste0(names(azizi_signatures)[j],"1")]][[1]],method="spearman")
@@ -469,12 +387,14 @@ for (i in 1:length(prefix_arr))
     test_pval3 = round(testres3$p.val,8)
     testres4 = cor.test(seu$DC4, seu[[paste0(names(azizi_signatures)[j],"1")]][[1]],method="spearman")
     test_pval4 = round(testres4$p.val,8)
+
     maintitle = paste0(names(azizi_signatures)[j],"1")
     maintitle = paste0(prefix_arr[i],"_",maintitle)
     maintitle_first = paste0(maintitle,"\nSpearman p-val with DC1: ",test_pval1)
     maintitle_first = paste0(maintitle_first,"\nSpearman p-val with DC2: ",test_pval2)
     maintitle_second = paste0(maintitle,"\nSpearman p-val with DC3: ",test_pval3)
     maintitle_second = paste0(maintitle_second,"\nSpearman p-val with DC4: ",test_pval4)
+
     maintitle_third = names(azizi_signatures)[j]
     if (maintitle_third=="just_TOX")
     {
@@ -484,10 +404,6 @@ for (i in 1:length(prefix_arr))
     {
       maintitle_third = "TCF7"
     }
-    #maintitle_third = maintitle
-    #maintitle_third = paste0(maintitle,"\nSpearman p-val with DC1: ",test_pval1)
-    #maintitle_third = paste0(maintitle_third,"\nSpearman p-val with DC2: ",test_pval2)
-    #maintitle_third = paste0(maintitle_third,"\nSpearman p-val with DC3: ",test_pval3)
 
     if (prefix_arr[i]=="cd8")
     {
@@ -533,8 +449,6 @@ for (i in 1:length(prefix_arr))
   {
     par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
     palette(viridis(length(unique(seu$clonality_group))))
-    #maintitle = 'clonality_group'
-    #maintitle = paste0(prefix_arr[i],"_",maintitle)
     maintitle = "Clonal expansion"
     color_factor = as.factor(es@phenoData@data$clonality_group)
     print(plot.DiffusionMap(dm, c(1,2,3), col = color_factor, pch = 20, main = maintitle, pal = clonality_palette[levels(color_factor)]))
@@ -563,27 +477,6 @@ for (i in 1:length(prefix_arr))
       }
       write.table(writeout_df, "ribas_melanoma_cd8_clonality_over_time.csv", sep=",", quote=FALSE, row.names=F, col.names=T)
     }
-
-    # par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    # palette(colDC)
-    # maintitle = 'treatment_group'
-    # maintitle = paste0(prefix_arr[i],"_",maintitle)
-    # print(plot.DiffusionMap(dm, c(1,2,3), col = as.factor(es@phenoData@data$treatment_group), pch = 20, main = maintitle))
-
-    # par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    # palette(viridis(length(unique(seu$celltype_bped_main))))
-    # maintitle = 'celltype_bped_main'
-    # maintitle = paste0(prefix_arr[i],"_",maintitle)
-    # print(plot.DiffusionMap(dm, c(1,2,3), col = as.factor(es@phenoData@data$celltype_bped_main), pch = 20, main = maintitle))
-
-    # if (length(unique(seu$original_seurat_clusters))>1)
-    # {
-    #   par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    #   palette(viridis(length(unique(seu$original_seurat_clusters))))
-    #   maintitle = 'original_seurat_cluster'
-    #   maintitle = paste0(prefix_arr[i],"_",maintitle)
-    #   print(plot.DiffusionMap(dm, c(1,2,3), col = as.factor(es@phenoData@data$original_seurat_clusters), pch = 20, main = maintitle))
-    # }
   }
   else
   {

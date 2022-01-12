@@ -13,12 +13,14 @@ foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
 integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all")
 integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","ribas","UMEL")
 
+#load in stress signature genes
 source("/mnt/vdb/home/ubuntu2/uveal-melanoma-code/fresh_vs_frozen_QC_stress_sigs.R")
 
 ribas_ifng_sig = read.table("ribas_ifng_sig.txt", header = F, sep = ",")
 stress_sig_list = list.append(stress_sig_list, ribas_ifng_sig)
 names(stress_sig_list) = c(names(stress_sig_list), "ribas_ifng_sig")
 
+#load data for BI5 scrna and snrna-seq samples, calculate stress signatures
 object.list = c()
 for (i in 1:2) {
   system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
@@ -31,37 +33,34 @@ for (i in 1:2) {
   object.list = c(object.list, integrated_rds)
 }
 
-makePubFigures = TRUE
-
+#merge together BI5 scrna and snrna-seq samples
 source("merge.SCTAssay.R")
+seu = merge.SCTAssay(x=object.list[1], y=object.list[2], merge.data = T, na.rm = T)
 
 pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/Mel_fresh_vs_frozen_QC.pdf"),height=7,width=5.5*length(unique(seu$orig.ident)))
 
+#rename BI5 sample names to shorter names for display in figure, add description of whether they are fresh or frozen
 uniqueidents = unique(seu$orig.ident)
-seu$orig.ident[seu$orig.ident=="CD45neg"] = "Mel_sc_5_CD45-"
-seu$orig.ident[seu$orig.ident=="CD45pos"] = "Mel_sc_5_CD45+"
-seu$orig.ident[seu$orig.ident=="3snseq"] = "Mel_sn_3"
-seu$orig.ident[seu$orig.ident=="5pv2-snseq"] = "Mel_sn_5v2"
-seu$orig.ident[seu$orig.ident=="5snseq"] = "Mel_sn_5"
+source("fresh_vs_frozen_rename_IDs.R")
+seu = rename_IDs(seu)
 
 seu$orig.ident = paste0(seu$orig.ident,"\n(",seu$fresh_frozen,")")
 
+#add new QC metric metadata fields, with name of dataset attached
 seu$Mel_nCount_RNA = seu$nCount_RNA
 seu$Mel_nFeature_RNA = seu$nFeature_RNA
 seu$Mel_ScrubDoublet_score = seu$ScrubDoublet_score
 seu$Mel_percent.mt = seu$percent.mt
-seu$Mel_stress_sig_dysfunctional_cd81 = seu$stress_sig_dysfunctional_cd81
-seu$Mel_stress_sig_nmeth_celseq1 = seu$stress_sig_nmeth_celseq1
-seu$Mel_stress_sig_nmeth_sortseq_cluster11 = seu$stress_sig_nmeth_sortseq_cluster11
-seu$Mel_stress_sig_nmeth_sortseq_cluster41 = seu$stress_sig_nmeth_sortseq_cluster41
-seu$Mel_stress_sig_genomebiol_cryopreserve1 = seu$stress_sig_genomebiol_cryopreserve1
-seu$Mel_stress_sig_brain_met1 = seu$stress_sig_brain_met1
-seu$Mel_ribas_ifng_sig1 = seu$ribas_ifng_sig1
-seu$Mel_num_zero_count_genes = colSums(seu@assays$RNA@counts==0)
+for (stress_sig in names(stress_sig_list))
+{
+  eval(parse(text=paste0("seu$Mel_",stress_sig,"1 = seu$",stress_sig,"1")))
+}
 
+#prepend either 1 or 2 to sample names, depending on fresh/frozen status, to ensure that fresh samples are displayed first
 seu$orig.ident[seu$fresh_frozen=="fresh"] = paste0("1_",seu$orig.ident[seu$fresh_frozen=="fresh"])
 seu$orig.ident[seu$fresh_frozen=="frozen"] = paste0("2_",seu$orig.ident[seu$fresh_frozen=="frozen"])
 
+#clip off 1 or 2 from sample names, to create array of labels that will actually be displayed in figure
 relabel_list = unique(seu$orig.ident)
 names(relabel_list) = relabel_list
 for (i in 1:length(relabel_list))
@@ -69,6 +68,7 @@ for (i in 1:length(relabel_list))
   relabel_list[i] = substring(relabel_list[i],3)
 }
 
+#violin plot figure, using manually encoded upper limits for violins, and fresh samples colored blue, frozen red
 aplot = VlnPlot(seu, features = c("Mel_nFeature_RNA","Mel_percent.mt","Mel_stress_sig_nmeth_celseq1"), group.by = "orig.ident",pt.size = 0)
 uniqueidents = unique(seu$orig.ident)
 ymax_arr = c(13000,25,3)
@@ -82,9 +82,11 @@ for (z2 in 1:3) {
 AugmentPlot(aplot, dpi = 300)
 print(aplot)
 
+#count number of cells that are present in each sample
 atable = table(seu$orig.ident)
 cellnumbersdf = data.frame(sample = names(atable), count = atable)
 
+#use wilcoxon test to test for differences in QC metrics between each pair of fresh and frozen samples
 testarrlong = list()
 testarr = list()
 fresh_ids = unique(seu$orig.ident[seu$fresh_frozen=="fresh"])
@@ -109,6 +111,7 @@ testarrlong = list.append(testarrlong, testarr)
 
 dev.off()
 
+#store median QC metrics for each sample in a dataframe
 qualitydf = data.frame(ident=character(), stat=character(), value=double())
 uniqueidents = unique(seu$orig.ident)
 for (uniqueident in uniqueidents)
@@ -122,6 +125,7 @@ for (uniqueident in uniqueidents)
   qualitydf = rbind(qualitydf, tempdf)
 }
 
+#repeat above steps for remaining datasets
 for (i in 3:length(foldersList)) {
   system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
   integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
@@ -135,6 +139,7 @@ for (i in 3:length(foldersList)) {
     integrated_rds$fresh_frozen[integrated_rds$fresh_frozen=="5pv2-snseq"] = "frozen"
   }
 
+  #for ribas samples, only look at sample 310
   if (integrated_name_arr_underscore[i]=="ribas")
   {
     integrated_rds$placeholder = FALSE
@@ -145,76 +150,24 @@ for (i in 3:length(foldersList)) {
   pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_fresh_vs_frozen_QC.pdf"),height=7,width=5.5*length(unique(integrated_rds$orig.ident)))
 
   uniqueidents = unique(integrated_rds$orig.ident)
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SCRNA-5P-NA-E12"] = "UM_sc_5"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SCRNA-5P-NA-F1"] = "UM_sc_5_CD45+"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SNRNA-5P-WI-F12"] = "UM_sn_5_inhib"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SCRNA_5P_NA"] = "NSCLC_sc_5"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="5pv2-snseq"] = "NSCLC_sn_5v2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SNSEQ_3P_NI"] = "NSCLC_sn_3"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SNSEQ_3P_WI"] = "NSCLC_sn_3_inhib"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SNSEQ_5P_NI"] = "NSCLC_sn_5"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="SNSEQ_5P_WI"] = "NSCLC_sn_5_inhib"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="ribas_310_pre_GEX_5pv2_S26_L004"] = "pre"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="ribas_310_on_GEX_5pv2_S27_L004"] = "on"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="ribas_310_on_later_previd_3_GEX"] = "on_later"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_07_gk_pre_S4_L001"] = "UMEL_1_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_07_gk_on_S8_L001"] = "UMEL_1_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="uv003-uvme-snseq-3p-post"] = "UMEL_1_3"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_08_ar_pre_S1_L001"] = "UMEL_2_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_08_ar_on_S2_L001"] = "UMEL_2_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_08_ar_post_S3_L001"] = "UMEL_2_3"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_09_mw_pre_S5_L001"] = "UMEL_3_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_09_mw_on_S6_L001"] = "UMEL_3_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_09_mw_post_S7_L001"] = "UMEL_3_3"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_11_lc_pre_S12_L002"] = "UMEL_4_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_11_lc_on_S16_L002"] = "UMEL_4_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_12_ml_pre_S9_L002"] = "UMEL_5_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_12_ml_on_S10_L002"] = "UMEL_5_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_12_ml_post_S11_L002"] = "UMEL_5_3"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_15_lm_pre_S13_L002"] = "UMEL_6_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_15_lm_on_S14_L002"] = "UMEL_6_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_15_lm_post_S15_L002"] = "UMEL_6_3"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_16_rs_pre_S17_L003"] = "UMEL_7_1"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_16_rs_on_S18_L003"] = "UMEL_7_2"
-  integrated_rds$orig.ident[integrated_rds$orig.ident=="um_16_rs_post_S19_L003"] = "UMEL_7_3"
-  # for (i1 in 1:length(uniqueidents))
-  # {
-  #   newident = uniqueidents[i1]
-  #   newident = str_replace(newident,"BI5_","")
-  #   newident = str_replace(newident,"nsclc_","")
-  #   newident = str_replace(newident,"cpoi-uvealprimarydata_","")
-  #   newident = str_replace(newident,"Sarcoma","")
-  #   newident = str_replace(newident,"GEX","")
-  #   newident = str_replace(newident,"_GEX","")
-  #   newident = str_replace(newident,"ribas_","")
-  #   newident = str_replace(newident,"um_","")
-  #   newident = str_replace(newident,"_S.*_L.*","")
-  #   newident = str_replace(newident,"uv003-uvme-snseq-3p-post","07_gk_post")
-  #   integrated_rds$orig.ident[integrated_rds$orig.ident==uniqueidents[i1]] = newident
-  # }
+  source("fresh_vs_frozen_rename_IDs.R")
+  integrated_rds = rename_IDs(integrated_rds)
 
   integrated_rds$orig.ident = paste0(integrated_rds$orig.ident,"\n(",integrated_rds$fresh_frozen,")")
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_dysfunctional_cd8)), name = "stress_sig_dysfunctional_cd8", assay = "RNA", search = T)
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_nmeth_celseq)), name = "stress_sig_nmeth_celseq", assay = "RNA", search = T)
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_nmeth_sortseq_cluster1)), name = "stress_sig_nmeth_sortseq_cluster1", assay = "RNA", search = T)
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_nmeth_sortseq_cluster4)), name = "stress_sig_nmeth_sortseq_cluster4", assay = "RNA", search = T)
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_genomebiol_cryopreserve)), name = "stress_sig_genomebiol_cryopreserve", assay = "RNA", search = T)
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_brain_met)), name = "stress_sig_brain_met", assay = "RNA", search = T)
-  integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(ribas_ifng_sig)), name = "ribas_ifng_sig", assay = "RNA", search = T)
+  for (stress_sig in names(stress_sig_list))
+  {
+    integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_list[[stress_sig]])), name = stress_sig, assay = "RNA", search = T)
+  }
 
   eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_nCount_RNA = integrated_rds$nCount_RNA")))
   eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_nFeature_RNA = integrated_rds$nFeature_RNA")))
   eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_ScrubDoublet_score = integrated_rds$ScrubDoublet_score")))
   eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_percent.mt = integrated_rds$percent.mt")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_stress_sig_dysfunctional_cd81 = integrated_rds$stress_sig_dysfunctional_cd81")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_stress_sig_nmeth_celseq1 = integrated_rds$stress_sig_nmeth_celseq1")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_stress_sig_nmeth_sortseq_cluster11 = integrated_rds$stress_sig_nmeth_sortseq_cluster11")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_stress_sig_nmeth_sortseq_cluster41 = integrated_rds$stress_sig_nmeth_sortseq_cluster41")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_stress_sig_genomebiol_cryopreserve1 = integrated_rds$stress_sig_genomebiol_cryopreserve1")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_stress_sig_brain_met1 = integrated_rds$stress_sig_brain_met1")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_ribas_ifng_sig1 = integrated_rds$ribas_ifng_sig1")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_num_zero_count_genes = colSums(integrated_rds@assays$RNA@counts==0)")))
-
+  for (stress_sig in names(stress_sig_list))
+  {
+    eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_",stress_sig,"1 = integrated_rds$",stress_sig,"1")))
+  }
+  
   integrated_rds$orig.ident[integrated_rds$fresh_frozen=="fresh"] = paste0("1_",integrated_rds$orig.ident[integrated_rds$fresh_frozen=="fresh"])
   integrated_rds$orig.ident[integrated_rds$fresh_frozen=="frozen"] = paste0("2_",integrated_rds$orig.ident[integrated_rds$fresh_frozen=="frozen"])
 
@@ -234,10 +187,12 @@ for (i in 3:length(foldersList)) {
     colorsarr = rep("",length(uniqueidents))
     colorsarr[grep("fresh",uniqueidents)] = "blue"
     colorsarr[grep("frozen",uniqueidents)] = "red"
+    #label 3p sample in UMEL dataset as yellow
     if (integrated_name_arr[i]=="um_all")
     {
       colorsarr[grep("UMEL_1_3",uniqueidents)] = "yellow"
     }
+    #reorder nsclc and ribas samples, so that fresh samples are plotted first
     if (integrated_name_arr[i]=="nsclc" || integrated_name_arr[i]=="ribas_integrated_titrate_thresh")
     {
       if (integrated_name_arr[i]=="nsclc")
@@ -307,6 +262,7 @@ for (i in 3:length(foldersList)) {
 
 names(stress_medians) = stress_medians_names
 
+#plot total number of cells in each sample
 pdf("fresh_vs_frozen_cell_count.pdf")
 theme_set(theme_bw())
 print(ggplot(cellnumbersdf, aes(y=count.Freq, x=sample)) + geom_bar(stat="identity") + ylab("Count") + theme(axis.text.x = element_text(angle=45, hjust=1)))

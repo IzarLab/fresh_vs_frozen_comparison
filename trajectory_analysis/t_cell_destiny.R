@@ -16,6 +16,7 @@ prefix_arr = c("cd8")#"treg_and_tfh","treg","tfh","cd4")#,"cd8")
 useRibas = FALSE
 for (i in 1:length(prefix_arr))
 {
+  #specify figure layout. if plotting ribas non-cd8 t-cells, plot multiple diffusion maps on grid of subplots. otherwise, plot each diffusion map on a separate individual plot.
   if (useRibas)
   {
     if (prefix_arr[i]=="cd8")
@@ -35,6 +36,7 @@ for (i in 1:length(prefix_arr))
 
   figurecount = 1
 
+  #load in data, extract t-cell subgroups to be used for diffusion map
   if (useRibas)
   {
     seu = readRDS("/data/reannotate_ribas_melanoma_merged_tcells.rds")
@@ -80,6 +82,7 @@ for (i in 1:length(prefix_arr))
   seu$treatment_group = unlist(lapply(strsplit(seu$orig.ident,"_"), function(x) {x[4]}))
   seu$celltype_bped_main[!(seu$celltype_bped_main %in% c("CD4+ T-cells","CD8+ T-cells","Melanocytes","NK cells"))] = "Other cell types"
 
+  #load in t-cell state and differentiation signatures, and calculate enrichment scores
   azizi_signatures = read.table("/mnt/vdb/home/ubuntu2/uveal-melanoma-code/azizi_signatures.csv",header=T,sep=",",quote=NULL)
   azizi_signatures_tcell_exhaustion = read.table("/mnt/vdb/home/ubuntu2/uveal-melanoma-code/azizi_signatures_tcell_exhaustion.txt",header=T,sep="\t",quote=NULL)
   while (dim(azizi_signatures_tcell_exhaustion)[1]<dim(azizi_signatures)[1])
@@ -106,6 +109,7 @@ for (i in 1:length(prefix_arr))
     seu = AddModuleScore(seu, features = list(na.omit(azizi_signatures[[names(azizi_signatures)[j]]])), name = names(azizi_signatures)[j], assay = "RNA", search = T)
   }
 
+  #load in t-cell differentiation signatures and calculate enrichment scores. for negative marker genes, first multiply expression of gene by -1, calculate enrichment score, then multiply expression again by -1.
   diff_sigs = read.table("/mnt/vdb/home/ubuntu2/uveal-melanoma-code/azizi_differentiation_state_markers.txt",sep="\t",header=T,quote=NULL)
   for (j in 1:length(names(diff_sigs)))
   {
@@ -149,6 +153,7 @@ for (i in 1:length(prefix_arr))
     azizi_signatures[[names(diff_sigs[j])]] = c(sig_genenames,rep("",dim(azizi_signatures)[1]-length(sig_genenames)))
   }
 
+  #if plotting cd8 t-cells, only project a subset of signatures onto diffusion map
   cd8_only = c("just_TOX","just_TCF7","TCell.Terminal.Differentiation","T.N","T.SCM","T.CM","T.EM","T.TE","Precursor.exhaustion")
   if (prefix_arr[i]=="cd8")
   {
@@ -161,6 +166,7 @@ for (i in 1:length(prefix_arr))
     }
   }
 
+  #score cells by cell cycle signatures, project scatter plot of cycling scores
   seu = CellCycleScoring(seu, s.features = cc.genes.updated.2019$s.genes, g2m.features = cc.genes.updated.2019$g2m.genes, set.ident = F)
   tempdf = data.frame(S=seu$S.Score, G2M=seu$G2M.Score)
   if (prefix_arr[i]=="cd8")
@@ -183,6 +189,7 @@ for (i in 1:length(prefix_arr))
   seu$nCount_RNA = 1.06*seu$nCount_RNA
   seu$nFeature_RNA = 1.06*seu$nFeature_RNA
 
+  #for cd8 t-cells, assign clonality expansion information
   if (prefix_arr[i]=="cd8")
   {
     source("assign_TCR_clonality.R")
@@ -220,6 +227,7 @@ for (i in 1:length(prefix_arr))
     seu$orig.ident[seu$orig.ident=="ribas1_pre_tcr_S35_L004"] = "ribas_310_pre"
   }
 
+  #select 2000 most variable features, use them to run diffusion map
   seu = FindVariableFeatures(seu, selection.method = "vst", nfeatures = 2000)
   if (useRibas && prefix_arr[i]=="cd8")
   {
@@ -234,6 +242,7 @@ for (i in 1:length(prefix_arr))
   es@phenoData@data <- seu@meta.data
   dm <- DiffusionMap(es, verbose = T, n_pcs = 30)
 
+  #read in frequencies of clonotypes for ribas samples
   if (useRibas)
   {
     ribas_tcr_pats = c("ribas1_pre_tcr_S35_L004","ribas1_on_tcr_S36_L004","ribas_310_on_later_previd_3_TCR")
@@ -258,10 +267,13 @@ for (i in 1:length(prefix_arr))
     names(combined) = unique_idents
   }
 
+  #determine proportions of clonotypes in each sample
   proptable1 = table(combined[[1]]$CTgene)/sum(table(combined[[1]]$CTgene))
   proptable2 = table(combined[[2]]$CTgene)/sum(table(combined[[2]]$CTgene))
   proptable3 = table(combined[[3]]$CTgene)/sum(table(combined[[3]]$CTgene))
 
+  #determine clonotypes that are shared between pre and on, and on and on_later samples
+  #calculate differences in clonotype frequency
   shared_1_and_2 = intersect(unique(combined[[1]]$CTgene),unique(combined[[2]]$CTgene))
   shared_1_and_2_diffs = (proptable2[shared_1_and_2] - proptable1[shared_1_and_2])
   shared_1_and_2_diffs = shared_1_and_2_diffs[names(sort(abs(shared_1_and_2_diffs),decreasing=T))]
@@ -270,69 +282,39 @@ for (i in 1:length(prefix_arr))
   shared_2_and_3_diffs = (proptable3[shared_2_and_3] - proptable2[shared_2_and_3])
   shared_2_and_3_diffs = shared_2_and_3_diffs[names(sort(abs(shared_2_and_3_diffs),decreasing=T))]
 
+  #determine top 20 most common clonotypes in each sample, and combine them
   #top_diff_names = union(names(shared_2_and_3_diffs[1:10]),names(shared_1_and_2_diffs[1:10]))
   top_diff_names = union(names(sort(table(combined[[1]]$CTgene),decreasing=T)),names(sort(table(combined[[2]]$CTgene),decreasing=T))[1:20])
   top_diff_names = union(top_diff_names,names(sort(table(combined[[3]]$CTgene),decreasing=T))[1:20])
 
-  qc_titles = c()
-  qc_fields = c()
+  #plot diffusion maps with QC metrics projected on top
+  qc_fields = c("nCount_RNA","nFeature_RNA","percent.mt","ScrubDoublet_score")
+  qc_titles = paste0(qc_fields," before quality filtering")
   if (prefix_arr[i]=="cd8")
   {
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'nCount_RNA before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2,3), col = es@phenoData@data$nCount_RNA, pch = 20, main = maintitle))
-
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'nFeature_RNA before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2,3), col = es@phenoData@data$nFeature_RNA, pch = 20, main = maintitle))
-
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'percent.mt before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2,3), col = es@phenoData@data$percent.mt, pch = 20, main = maintitle))
-
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'ScrubDoublet_score before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2,3), col = es@phenoData@data$ScrubDoublet_score, pch = 20, main = maintitle))
+    for(qc_idx in 1:length(qc_fields))
+    {
+      par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
+      palette(viridis(100))
+      maintitle = qc_titles[qc_idx]
+      maintitle = paste0(prefix_arr[i],"_",maintitle)
+      print(plot.DiffusionMap(dm, c(1,2,3), col = es@phenoData@data[[qc_fields[qc_idx]]], pch = 20, main = maintitle))
+    }
   }
   else
   {
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'nCount_RNA before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2), col = es@phenoData@data$nCount_RNA, pch = 20) + ggtitle(maintitle), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'nFeature_RNA before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2), col = es@phenoData@data$nFeature_RNA, pch = 20) + ggtitle(maintitle), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'percent.mt before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2), col = es@phenoData@data$percent.mt, pch = 20) + ggtitle(maintitle), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
-
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(100))
-    maintitle = 'ScrubDoublet_score before quality filtering'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2), col = es@phenoData@data$ScrubDoublet_score, pch = 20) + ggtitle(maintitle), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
-    figurecount = figurecount+1
+    for(qc_idx in 1:length(qc_fields))
+    {
+      par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
+      palette(viridis(100))
+      maintitle = qc_titles[qc_idx]
+      maintitle = paste0(prefix_arr[i],"_",maintitle)
+      print(plot.DiffusionMap(dm, c(1,2), col = es@phenoData@data[[qc_fields[qc_idx]]], pch = 20) + ggtitle(maintitle), vp=vplayout(floor((figurecount-1)/9)+1, ((figurecount-1) %% 9)+1))
+      figurecount = figurecount+1
+    }
   }
 
+  #plot values of diffusion components 1-10 on gene expression umaps of t-cells
   for(dcidx = 1:10)
   {
     seu$DC1 = dm$DC1
@@ -354,6 +336,8 @@ for (i in 1:length(prefix_arr))
     }
   }
 
+  #project strength of t-cell state and differentiation signatures onto diffusion maps
+  #print 3 signatures per row for non-cd8 t-cells, 5 signatures for cd8
   rownum = floor((figurecount-1)/9)+1
   colnum = ((figurecount-1) %% 9)+1
   rownum = rownum+1
@@ -379,6 +363,7 @@ for (i in 1:length(prefix_arr))
     par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
     palette(viridis(100))
 
+    #calculate correlation values of signature with DCs 1-4
     testres1 = cor.test(seu$DC1, seu[[paste0(names(azizi_signatures)[j],"1")]][[1]],method="spearman")
     test_pval1 = round(testres1$p.val,8)
     testres2 = cor.test(seu$DC2, seu[[paste0(names(azizi_signatures)[j],"1")]][[1]],method="spearman")
@@ -388,6 +373,8 @@ for (i in 1:length(prefix_arr))
     testres4 = cor.test(seu$DC4, seu[[paste0(names(azizi_signatures)[j],"1")]][[1]],method="spearman")
     test_pval4 = round(testres4$p.val,8)
 
+    #print correlation values for DCs 1 and 2, and DCs 3 and 4, in title
+    #or alternatively, do not print correlation values for non-cd8 t-cells
     maintitle = paste0(names(azizi_signatures)[j],"1")
     maintitle = paste0(prefix_arr[i],"_",maintitle)
     maintitle_first = paste0(maintitle,"\nSpearman p-val with DC1: ",test_pval1)
@@ -424,6 +411,8 @@ for (i in 1:length(prefix_arr))
     }
   }
 
+  #calculate correlation of all genes expression with first four DCs
+  #write out results to csv file, excluding ribosomal and mitochondrial genes
   corr_df = data.frame(gene=character(), dc = integer(), rho = double(), pval = double())
   for (z1 in 1:4)
   {
@@ -447,12 +436,16 @@ for (i in 1:length(prefix_arr))
 
   if (prefix_arr[i]=="cd8")
   {
+    #plot clonal expansion on diffusion map if plotting cd8
     par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
     palette(viridis(length(unique(seu$clonality_group))))
     maintitle = "Clonal expansion"
     color_factor = as.factor(es@phenoData@data$clonality_group)
     print(plot.DiffusionMap(dm, c(1,2,3), col = color_factor, pch = 20, main = maintitle, pal = clonality_palette[levels(color_factor)]))
 
+    #for ribas samples, plot 20 largest clonotypes from each sample on diffusion map
+    #color samples by timepoint: pre, on, and on_later
+    #write out data to csv file, for use by rgl_script.R later
     if (useRibas)
     {
       writeout_df = data.frame(DC1=seu$DC1, DC2=seu$DC2, DC3=seu$DC3)
@@ -480,31 +473,24 @@ for (i in 1:length(prefix_arr))
   }
   else
   {
-    rownum = rownum+1
-    colnum = 1
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(colDC)
-    maintitle = 'treatment_group'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2), col = as.factor(es@phenoData@data$treatment_group), pch = 20, main = maintitle), vp=vplayout(rownum, colnum))
-    figurecount = figurecount+1
-
-    colnum = 2
-    par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-    palette(viridis(length(unique(seu$celltype_bped_main))))
-    maintitle = 'celltype_bped_main'
-    maintitle = paste0(prefix_arr[i],"_",maintitle)
-    print(plot.DiffusionMap(dm, c(1,2), col = as.factor(es@phenoData@data$celltype_bped_main), pch = 20, main = maintitle), vp=vplayout(rownum, colnum))
-    figurecount = figurecount+1
-
+    #plot diffusion maps with QC metrics projected on top
+    misc_fields = c("treatment_group","celltype_bped_main","original_seurat_clusters")
+    misc_titles = misc_fields
     if (length(unique(seu$original_seurat_clusters))>1)
     {
-      colnum = 3
+      misc_fields = c(misc_fields,"original_seurat_clusters")
+      misc_titles = misc_fields
+    }
+    
+    rownum = rownum+1
+    for (miscidx in 1:length(misc_fields))
+    {
+      colnum = miscidx
       par(mar = c(5.1, 4.1, 4.1, 7), xpd = TRUE)
-      palette(viridis(length(unique(seu$original_seurat_clusters))))
-      maintitle = 'original_seurat_cluster'
+      palette(colDC)
+      maintitle = misc_titles[miscidx]
       maintitle = paste0(prefix_arr[i],"_",maintitle)
-      print(plot.DiffusionMap(dm, c(1,2), col = as.factor(es@phenoData@data$original_seurat_clusters), pch = 20, main = maintitle), vp=vplayout(rownum, colnum))
+      print(plot.DiffusionMap(dm, c(1,2), col = as.factor(es@phenoData@data[[misc_fields[miscidx]]]), pch = 20, main = maintitle), vp=vplayout(rownum, colnum))
       figurecount = figurecount+1
     }
   }

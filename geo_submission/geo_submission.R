@@ -5,19 +5,19 @@ library(rlang)
 library(rlist)
 library(dplyr)
 
-rename_tcr_arr = c("Mel_sc_5_CD45+","Mel_sn_5","UM_sc_5","UM_sc_5_CD45+","UM_sn_5_inhib","NSCLC_sc_5","NSCLC_sn_5","NSCLC_sn_5_inhib","ribas_pre","ribas_on","ribas_on_later","UMEL_1_1","UMEL_1_2","UMEL_2_1","UMEL_2_2","UMEL_2_3","UMEL_3_1","UMEL_3_2","UMEL_3_3","UMEL_4_1","UMEL_4_2","UMEL_5_1","UMEL_5_2","UMEL_5_3","UMEL_6_1","UMEL_6_2","UMEL_6_3","UMEL_7_1","UMEL_7_2","UMEL_7_3")
+# rename_tcr_arr = c("Mel_sc_5_CD45+","Mel_sn_5","UM_sc_5","UM_sc_5_CD45+","UM_sn_5_inhib","NSCLC_sc_5","NSCLC_sn_5","NSCLC_sn_5_inhib","ribas_pre","ribas_on","ribas_on_later","UMEL_1_1","UMEL_1_2","UMEL_2_1","UMEL_2_2","UMEL_2_3","UMEL_3_1","UMEL_3_2","UMEL_3_3","UMEL_4_1","UMEL_4_2","UMEL_5_1","UMEL_5_2","UMEL_5_3","UMEL_6_1","UMEL_6_2","UMEL_6_3","UMEL_7_1","UMEL_7_2","UMEL_7_3")
 
-names(rename_tcr_arr) = c("TCRBI5_S1_L001","bi005-skcm-5snseq-TCR","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-TCR-F2","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-TCR-F3","UMEL-CUUM1-SNRNA-5P-WI-PRIMARY-TCR-F9","NSCL_NR001_SCRNA_5P_NA_BRAIN_TCR","NSCL_NR001_SNSEQ_5P_NI_BRAIN_TCR","NSCL_NR001_SNSEQ_5P_WI_BRAIN_TCR","ribas1_pre_tcr_S35_L004","ribas1_on_tcr_S36_L004","ribas_310_on_later_previd_3_TCR","um_07_gk_pre_S4_L001","um_07_gk_on_S8_L001","um_08_ar_pre_S1_L001","um_08_ar_on_S2_L001","um_08_ar_post_S3_L001","um_09_mw_pre_S5_L001","um_09_mw_on_S6_L001","um_09_mw_post_S7_L001","um_11_lc_pre_S12_L002","um_11_lc_on_S16_L002","um_12_ml_pre_S9_L002","um_12_ml_on_S10_L002","um_12_ml_post_S11_L002","um_15_lm_pre_S13_L002","um_15_lm_on_S14_L002","um_15_lm_post_S15_L002","um_16_rs_pre_S17_L003","um_16_rs_on_S18_L003","um_16_rs_post_S19_L003")
+# names(rename_tcr_arr) = c("TCRBI5_S1_L001","bi005-skcm-5snseq-TCR","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-TCR-F2","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-TCR-F3","UMEL-CUUM1-SNRNA-5P-WI-PRIMARY-TCR-F9","NSCL_NR001_SCRNA_5P_NA_BRAIN_TCR","NSCL_NR001_SNSEQ_5P_NI_BRAIN_TCR","NSCL_NR001_SNSEQ_5P_WI_BRAIN_TCR","ribas1_pre_tcr_S35_L004","ribas1_on_tcr_S36_L004","ribas_310_on_later_previd_3_TCR","um_07_gk_pre_S4_L001","um_07_gk_on_S8_L001","um_08_ar_pre_S1_L001","um_08_ar_on_S2_L001","um_08_ar_post_S3_L001","um_09_mw_pre_S5_L001","um_09_mw_on_S6_L001","um_09_mw_post_S7_L001","um_11_lc_pre_S12_L002","um_11_lc_on_S16_L002","um_12_ml_pre_S9_L002","um_12_ml_on_S10_L002","um_12_ml_post_S11_L002","um_15_lm_pre_S13_L002","um_15_lm_on_S14_L002","um_15_lm_post_S15_L002","um_16_rs_pre_S17_L003","um_16_rs_on_S18_L003","um_16_rs_post_S19_L003")
 
-for (i in 1:length(rename_tcr_arr)) {
-  aname = names(rename_tcr_arr)[i]
-  system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/all_contig_annotations.csv /data/GEO/processed/",rename_tcr_arr[i],"_all_contig_annotations.csv"))
-  system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/filtered_contig_annotations.csv /data/GEO/processed/",rename_tcr_arr[i],"_filtered_contig_annotations.csv"))
-  system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/clonotypes.csv /data/GEO/processed/",rename_tcr_arr[i],"_clonotypes.csv"))
-  system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/consensus_annotations.csv /data/GEO/processed/",rename_tcr_arr[i],"_consensus_annotations.csv"))
-}
+# for (i in 1:length(rename_tcr_arr)) {
+#   aname = names(rename_tcr_arr)[i]
+#   system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/all_contig_annotations.csv /data/GEO/processed/",rename_tcr_arr[i],"_all_contig_annotations.csv"))
+#   system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/filtered_contig_annotations.csv /data/GEO/processed/",rename_tcr_arr[i],"_filtered_contig_annotations.csv"))
+#   system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/clonotypes.csv /data/GEO/processed/",rename_tcr_arr[i],"_clonotypes.csv"))
+#   system(paste0("cp /mnt/vdb/home/ubuntu2/",aname,"/consensus_annotations.csv /data/GEO/processed/",rename_tcr_arr[i],"_consensus_annotations.csv"))
+# }
 
-nonsense = nonsense+1
+# nonsense = nonsense+1
 
 foldersList = c("",
   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
@@ -45,7 +45,6 @@ for (i in 1:length(foldersList)) {
   print(integrated_name_arr[i])
   print(dim(seu))
   print(length(unique(seu$orig.ident)))
-  geo_num_arr = c(geo_num_arr, dim(seu))
 
   if (i==1)
   {

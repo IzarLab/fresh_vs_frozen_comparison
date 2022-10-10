@@ -25,156 +25,209 @@ names(hinges) = c("chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9"
 pdf("fresh_vs_frozen_correlate_infercnv.pdf")
 doubledf = data.frame(x=double(), y=double(), comparison=character())
 titleline = ""
-for (largeindex in 1:length(patslist))
+topermutearr = c("permutecells","nopermute")
+infercnv_arr = list()
+corres_arr = list()
+for (permuteopt in topermutearr)
 {
-  pats = patslist[[largeindex]]
-  shortpats = shortpatslist[[largeindex]]
-  s3folders = s3folderlist[[largeindex]]
-  cancertissues = cancertissuelist[[largeindex]]
-  fresh_frozen_arr = fresh_frozen_list[[largeindex]]
-  fresh_gene_cnv = list()
-  frozen_gene_cnv = list()
-  for (i in 1:length(pats))
+  if (permuteopt=="nopermute")
   {
-    pat = pats[i]
-    s3folder = s3folders[i]
-    system(paste0("aws s3 cp s3://",s3folder,"/inferCNV/inferCNV_cellbender_subcluster_",pat,"/run.final.infercnv_obj /data/",pat,"_infercnv.rds"))
-    infercnv_obj = readRDS(paste0("/data/",pat,"_infercnv.rds"))
-    canceridxs = c()
-    cancertissuearr = cancertissues[[i]]
-    for (j in 1:length(cancertissuearr))
-    {
-      canceridxs = c(canceridxs, infercnv_obj@observation_grouped_cell_indices[[cancertissuearr[j]]])
-    }
-
-    average_cnv = rowMeans(infercnv_obj@expr.data[,canceridxs])
-
-    average_cnv_temp = c()
-    for (achr in sort(unique(infercnv_obj@gene_order$chr)))
-    {
-      startsteps = c(1,hinges[achr])
-      stopsteps = c(hinges[achr]+1, chrlengths[achr])
-
-      print(achr)
-      for (z in 1:length(startsteps))
-      {
-        included_genes = rownames(infercnv_obj@gene_order)[infercnv_obj@gene_order$chr==achr & infercnv_obj@gene_order$start>startsteps[z] & infercnv_obj@gene_order$stop<stopsteps[z]]
-	if (length(included_genes)>0)
-	{
-	  average_cnv_temp = c(average_cnv_temp, mean(average_cnv[included_genes]))
-	}
-	else
-	{
-	  average_cnv_temp = c(average_cnv_temp, 1)
-	}
-	if (length(names(average_cnv_temp))==0)
-	{
-	  names(average_cnv_temp) = c(paste0(achr," ",startsteps[z]," ",stopsteps[z]))
-	}
-	else
-	{
-	  names(average_cnv_temp)[length(names(average_cnv_temp))] = paste0(achr," ",startsteps[z]," ",stopsteps[z])
-	}
-      }
-    }
-    average_cnv = average_cnv_temp
-
-    if (fresh_frozen_arr[i]=="fresh")
-    {
-      fresh_gene_cnv = list.append(fresh_gene_cnv, average_cnv)
-    }
-    if (fresh_frozen_arr[i]=="frozen")
-    {
-      frozen_gene_cnv = list.append(frozen_gene_cnv, average_cnv)
-    }
-    system(paste0("rm /data/",pat,"_infercnv.rds"))
+    numiters = 1
   }
-
-  if (length(fresh_gene_cnv)>0 && length(frozen_gene_cnv)>0)
+  else
   {
-    common_genes = names(fresh_gene_cnv[[1]])
-    for (i in 1:length(fresh_gene_cnv))
+    numiters = 1000
+  }
+  for (aniter in 1:numiters)
+  {
+    for (largeindex in 1:length(patslist))
     {
-      common_genes = intersect(common_genes, names(fresh_gene_cnv[[i]]))
-    }
-
-    fresh_average_cnv = fresh_gene_cnv[[1]][common_genes]
-    if (length(fresh_gene_cnv)>1)
-    {
-      for (i in 2:length(fresh_gene_cnv))
+      pats = patslist[[largeindex]]
+      shortpats = shortpatslist[[largeindex]]
+      s3folders = s3folderlist[[largeindex]]
+      cancertissues = cancertissuelist[[largeindex]]
+      fresh_frozen_arr = fresh_frozen_list[[largeindex]]
+      fresh_gene_cnv = list()
+      frozen_gene_cnv = list()
+      for (i in 1:length(pats))
       {
-	fresh_average_cnv = fresh_average_cnv + fresh_gene_cnv[[i]][common_genes]
-      }
-    }
-    fresh_average_cnv = fresh_average_cnv/length(fresh_gene_cnv)
+	pat = pats[i]
+	s3folder = s3folders[i]
 
-    common_genes = names(frozen_gene_cnv[[1]])
-    for (i in 1:length(frozen_gene_cnv))
-    {
-      common_genes = intersect(common_genes, names(frozen_gene_cnv[[i]]))
-    }
-
-    frozen_average_cnv = frozen_gene_cnv[[1]][common_genes]
-    if (length(frozen_gene_cnv)>1)
-    {
-      for (i in 2:length(frozen_gene_cnv))
-      {
-	frozen_average_cnv = frozen_average_cnv + frozen_gene_cnv[[i]][common_genes]
-      }
-    }
-    frozen_average_cnv = frozen_average_cnv/length(frozen_gene_cnv)
-
-    if (length(fresh_gene_cnv)==1)
-    {
-      singlet_gene_cnv = fresh_gene_cnv[[1]]
-      multiple_gene_cnv = frozen_gene_cnv
-      singlet_pats = shortpats[fresh_frozen_arr=="fresh"]
-      multiple_pats = shortpats[fresh_frozen_arr=="frozen"]
-      singlet_type = "fresh"
-      multiple_type = "frozen"
-    }
-    else
-    {
-      singlet_gene_cnv = frozen_gene_cnv[[1]]
-      multiple_gene_cnv = fresh_gene_cnv
-      singlet_pats = shortpats[fresh_frozen_arr=="frozen"]
-      multiple_pats = shortpats[fresh_frozen_arr=="fresh"]
-      singlet_type = "frozen"
-      multiple_type = "fresh"
-    }
-    for (z in 1:length(multiple_gene_cnv))
-    {
-      common_genes = intersect(names(singlet_gene_cnv), names(multiple_gene_cnv[[z]]))
-      corres = cor.test(singlet_gene_cnv[common_genes], multiple_gene_cnv[[z]][common_genes], method="spearman")
-      tempdf = data.frame(x=singlet_gene_cnv[common_genes], y=multiple_gene_cnv[[z]][common_genes])
-      tempdf = tempdf[abs(tempdf$x-1)>.01 & abs(tempdf$y-1)>.01,]
-      theme_set(theme_bw())
-      if (singlet_type=="fresh")
-      {
-        print(ggplot(tempdf, aes(x, y)) + geom_point(alpha = 1) + xlab(paste0(singlet_pats[1]," (Fresh) copy number")) + ylab(paste0(multiple_pats[z]," (Frozen) copy number")) + xlim(c(0.8,1.2)) + ylim(c(0.8,1.2)) + ggtitle(paste0(title_names[largeindex],"\nSpearman's R^2: ",as.character(round(corres$estimate^2,2)))))
-      }
-      else
-      {
-        print(ggplot(tempdf, aes(x, y)) + geom_point(alpha = 1) + xlab(paste0(multiple_pats[z]," (Fresh) copy number")) + ylab(paste0(singlet_pats[1]," (Frozen) copy number")) + xlim(c(0.8,1.2)) + ylim(c(0.8,1.2)) + ggtitle(paste0(title_names[largeindex],"\n","\nSpearman's R^2: ",as.character(round(corres$estimate^2,2)))))
-      }
-
-      if (singlet_pats[1]=="CD45neg" && (multiple_pats[z]=="5snseq" || multiple_pats[z]=="5pv2-snseq"))
-      {
-        tempdf$comparison = paste0(singlet_pats[1]," vs. ",multiple_pats[z])
-	doubledf = rbind(doubledf, tempdf)
-	if (titleline=="")
+	#if (!file.exists(paste0("/data/",pat,"_infercnv.rds")))
+	#{
+	#  system(paste0("aws s3 cp s3://",s3folder,"/inferCNV/inferCNV_cellbender_subcluster_",pat,"/run.final.infercnv_obj /data/",pat,"_infercnv.rds"))
+	#}
+	if (sum(pat==names(infercnv_arr))==0)
 	{
-	  titleline = paste0(titleline,multiple_pats[z]," vs. ",singlet_pats[1]," Spearman's R^2: ",as.character(round(corres$estimate^2,2)),"\n")
+	  system(paste0("aws s3 cp s3://",s3folder,"/inferCNV/inferCNV_cellbender_subcluster_",pat,"/run.final.infercnv_obj /data/",pat,"_infercnv.rds"))
+	  infercnv_obj = readRDS(paste0("/data/",pat,"_infercnv.rds"))
+	  infercnv_arr[[pat]] = infercnv_obj
+	}
+	infercnv_obj = infercnv_arr[[pat]]
+	
+	canceridxs = c()
+	cancertissuearr = cancertissues[[i]]
+
+	for (j in 1:length(cancertissuearr))
+	{
+	  canceridxs = c(canceridxs, infercnv_obj@observation_grouped_cell_indices[[cancertissuearr[j]]])
+	}
+
+	if (permuteopt=="permutecells")
+	{
+	  canceridxs = sample(canceridxs,floor(length(canceridxs)/2))
+	}
+
+	average_cnv = rowMeans(infercnv_obj@expr.data[,canceridxs])
+
+	average_cnv_temp = c()
+	for (achr in sort(unique(infercnv_obj@gene_order$chr)))
+	{
+	  startsteps = c(1,hinges[achr])
+	  stopsteps = c(hinges[achr]+1, chrlengths[achr])
+
+	  print(achr)
+	  for (z in 1:length(startsteps))
+	  {
+	    included_genes = rownames(infercnv_obj@gene_order)[infercnv_obj@gene_order$chr==achr & infercnv_obj@gene_order$start>startsteps[z] & infercnv_obj@gene_order$stop<stopsteps[z]]
+	    if (length(included_genes)>0)
+	    {
+	      average_cnv_temp = c(average_cnv_temp, mean(average_cnv[included_genes]))
+	    }
+	    else
+	    {
+	      average_cnv_temp = c(average_cnv_temp, 1)
+	    }
+	    if (length(names(average_cnv_temp))==0)
+	    {
+	      names(average_cnv_temp) = c(paste0(achr," ",startsteps[z]," ",stopsteps[z]))
+	    }
+	    else
+	    {
+	      names(average_cnv_temp)[length(names(average_cnv_temp))] = paste0(achr," ",startsteps[z]," ",stopsteps[z])
+	    }
+	  }
+	}
+	average_cnv = average_cnv_temp
+
+	if (fresh_frozen_arr[i]=="fresh")
+	{
+	  fresh_gene_cnv = list.append(fresh_gene_cnv, average_cnv)
+	}
+	if (fresh_frozen_arr[i]=="frozen")
+	{
+	  frozen_gene_cnv = list.append(frozen_gene_cnv, average_cnv)
+	}
+	system(paste0("rm /data/",pat,"_infercnv.rds"))
+      }
+
+      if (length(fresh_gene_cnv)>0 && length(frozen_gene_cnv)>0)
+      {
+	common_genes = names(fresh_gene_cnv[[1]])
+	for (i in 1:length(fresh_gene_cnv))
+	{
+	  common_genes = intersect(common_genes, names(fresh_gene_cnv[[i]]))
+	}
+
+	fresh_average_cnv = fresh_gene_cnv[[1]][common_genes]
+	if (length(fresh_gene_cnv)>1)
+	{
+	  for (i in 2:length(fresh_gene_cnv))
+	  {
+	    fresh_average_cnv = fresh_average_cnv + fresh_gene_cnv[[i]][common_genes]
+	  }
+	}
+	fresh_average_cnv = fresh_average_cnv/length(fresh_gene_cnv)
+
+	common_genes = names(frozen_gene_cnv[[1]])
+	for (i in 1:length(frozen_gene_cnv))
+	{
+	  common_genes = intersect(common_genes, names(frozen_gene_cnv[[i]]))
+	}
+
+	frozen_average_cnv = frozen_gene_cnv[[1]][common_genes]
+	if (length(frozen_gene_cnv)>1)
+	{
+	  for (i in 2:length(frozen_gene_cnv))
+	  {
+	    frozen_average_cnv = frozen_average_cnv + frozen_gene_cnv[[i]][common_genes]
+	  }
+	}
+	frozen_average_cnv = frozen_average_cnv/length(frozen_gene_cnv)
+
+	if (length(fresh_gene_cnv)==1)
+	{
+	  singlet_gene_cnv = fresh_gene_cnv[[1]]
+	  multiple_gene_cnv = frozen_gene_cnv
+	  singlet_pats = shortpats[fresh_frozen_arr=="fresh"]
+	  multiple_pats = shortpats[fresh_frozen_arr=="frozen"]
+	  singlet_type = "fresh"
+	  multiple_type = "frozen"
 	}
 	else
 	{
-	  titleline = paste0(titleline,multiple_pats[z]," vs. ",singlet_pats[1]," Spearman's R^2: ",as.character(round(corres$estimate^2,2)))
+	  singlet_gene_cnv = frozen_gene_cnv[[1]]
+	  multiple_gene_cnv = fresh_gene_cnv
+	  singlet_pats = shortpats[fresh_frozen_arr=="frozen"]
+	  multiple_pats = shortpats[fresh_frozen_arr=="fresh"]
+	  singlet_type = "frozen"
+	  multiple_type = "fresh"
+	}
+	for (z in 1:length(multiple_gene_cnv))
+	{
+	  common_genes = intersect(names(singlet_gene_cnv), names(multiple_gene_cnv[[z]]))
+	  corres = cor.test(singlet_gene_cnv[common_genes], multiple_gene_cnv[[z]][common_genes], method="spearman")
+
+          if (permuteopt=="permutecells")
+	  {
+	    corres_label = paste0(singlet_pats[1]," vs. ",multiple_pats[z])
+	    if (sum(names(corres_arr)==corres_label)==0)
+	    {
+	      corres_arr[[corres_label]] = c()
+	    }
+	    corres_arr[[corres_label]] = c(corres_arr[[corres_label]], (corres$estimate)^2)
+	    #print(corres_arr)
+	  }
+
+          if (permuteopt=="nopermute")
+	  {
+	    corres_label = paste0(singlet_pats[1]," vs. ",multiple_pats[z])
+
+            tempdf = data.frame(x=singlet_gene_cnv[common_genes], y=multiple_gene_cnv[[z]][common_genes])
+	    tempdf = tempdf[abs(tempdf$x-1)>.01 & abs(tempdf$y-1)>.01,]
+	    theme_set(theme_bw())
+	    if (singlet_type=="fresh")
+	    {
+	      print(ggplot(tempdf, aes(x, y)) + geom_point(alpha = 1) + xlab(paste0(singlet_pats[1]," (Fresh) copy number")) + ylab(paste0(multiple_pats[z]," (Frozen) copy number")) + xlim(c(0.8,1.2)) + ylim(c(0.8,1.2)) + ggtitle(paste0(title_names[largeindex],"\nSpearman's R^2: ",as.character(round(corres$estimate^2,2)))))
+	    }
+	    else
+	    {
+	      print(ggplot(tempdf, aes(x, y)) + geom_point(alpha = 1) + xlab(paste0(multiple_pats[z]," (Fresh) copy number")) + ylab(paste0(singlet_pats[1]," (Frozen) copy number")) + xlim(c(0.8,1.2)) + ylim(c(0.8,1.2)) + ggtitle(paste0(title_names[largeindex],"\n","\nSpearman's R^2: ",as.character(round(corres$estimate^2,2)))))
+	    }
+	    print(hist(corres_arr[[corres_label]], main=paste0(corres_label," random selection of half of cells"), xlab="Spearman's R^2"))
+
+	    if (singlet_pats[1]=="CD45neg" && (multiple_pats[z]=="5snseq" || multiple_pats[z]=="5pv2-snseq"))
+	    {
+	      tempdf$comparison = paste0(singlet_pats[1]," vs. ",multiple_pats[z])
+	      doubledf = rbind(doubledf, tempdf)
+	      if (titleline=="")
+	      {
+		titleline = paste0(titleline,multiple_pats[z]," vs. ",singlet_pats[1]," Spearman's R^2: ",as.character(round(corres$estimate^2,2)),"\n")
+	      }
+	      else
+	      {
+		titleline = paste0(titleline,multiple_pats[z]," vs. ",singlet_pats[1]," Spearman's R^2: ",as.character(round(corres$estimate^2,2)))
+	      }
+	    }
+	  }
 	}
       }
     }
   }
 }
 dev.off()
+nonsense = nonsense+1
 
 pdf("BI5_correlate_infercnv.pdf",height=7,width=10)
 doubledf_sub1 = subset(doubledf, comparison=="CD45neg vs. 5pv2-snseq")

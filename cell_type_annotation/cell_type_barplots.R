@@ -13,14 +13,14 @@ if (useRibas)
   integrated_name_arr = c("ribas_310")
   integrated_name_arr_underscore = c("ribas_310")
   outputname = "ribas_310"
-}
-else
-{
+} else {
   foldersList = c("",
     "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
-    "s3://fresh-vs-frozen-comparison-ohio/nsclc")
-  integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc")
-  integrated_name_arr_underscore = c("BI5","cpoi_uvealprimarydata","nsclc")
+    "s3://fresh-vs-frozen-comparison-ohio/nsclc",
+    "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
+    "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc","BI5","NR1")
+  integrated_name_arr_underscore = c("BI5","cpoi_uvealprimarydata","nsclc","BI5","NR1")
   outputname = "fresh_vs_frozen"
 }
 
@@ -33,6 +33,7 @@ bardf = data.frame(sample=character(), celltype=character(), frequency=integer()
 
 for (i in 1:length(foldersList))
 {
+  using_slyper = FALSE
   if (useRibas)
   {
     integrated_rds = readRDS("/data/fresh_vs_frozen_all_reannotate_ribas_310.rds")
@@ -45,10 +46,21 @@ for (i in 1:length(foldersList))
     }
     else
     {
+      if (foldersList[i]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+      {
+        using_slyper = TRUE
+      }
       system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
       integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
       system(paste0("rm /data/",integrated_name_arr[i],"_integrated.rds"))
     }
+  }
+
+  if (using_slyper)
+  {
+    integrated_rds = subset(integrated_rds, orig.ident!="3snseq")
+    integrated_rds = subset(integrated_rds, orig.ident!="SNSEQ_3P_NI")
+    integrated_rds = subset(integrated_rds, orig.ident!="SNSEQ_3P_WI")
   }
 
   integrated_rds$orig.ident = paste0(integrated_name_arr_underscore[i],"_",integrated_rds$orig.ident)
@@ -123,7 +135,7 @@ if (useRibas)
   print(ggplot(simpsondf, aes(y=simpson_diversity, x=sample)) + geom_bar(stat="identity") + scale_x_discrete(limits = unique_samples, labels=label_samples) + ylab("Nonimmune_Simpson Diversity") + ylim(c(0,1)) + xlab("sample") + theme(axis.text.x = element_text(angle = 90, hjust = 1)))
   dev.off()
 } else {
-  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_cell_comp.pdf"),height=7,width=8)
+  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_cell_comp.pdf"),height=7,width=12)
 
   rename_arr_list = list(bardf$sample, names(immune_simpson_list), names(nonimmune_simpson_list))
   for (i in 1:length(rename_arr_list))
@@ -158,15 +170,21 @@ if (useRibas)
   }
 
   bardf2 = bardf
+  bardf_temp = data.frame(sample="Bz",celltype="Mitochondrial",frequency=0)
+  bardf2 = rbind(bardf2, bardf_temp)
   bardf_temp = data.frame(sample="Mz",celltype="Mitochondrial",frequency=0)
   bardf2 = rbind(bardf2, bardf_temp)
-  bardf_temp = data.frame(sample="Nz",celltype="Mitochondrial",frequency=0)
+  bardf_temp = data.frame(sample="NSCLCz",celltype="Mitochondrial",frequency=0)
+  bardf2 = rbind(bardf2, bardf_temp)
+  bardf_temp = data.frame(sample="Uz",celltype="Mitochondrial",frequency=0)
   bardf2 = rbind(bardf2, bardf_temp)
   bardf2 = bardf2[order(bardf2$sample),]
 
   unique_samples = sort(unique(bardf2$sample))
 
-  unique_samples = unique_samples[c(7,12,8,9,10,11,6,1,2,3,4,5,13,14,15,16)]
+  #unique_samples = unique_samples[c(1,2,3)]
+  #unique_samples = unique_samples[c(14,15,16,17,18,19,20,4,5,6,7,8,9,21,22,23,24,1,2,3,10,11)]
+  unique_samples = unique_samples[c(12,17,13,14,15,16,18,4,5,6,7,8,9,19,20,21,22,1,2,3,10,11)]
 
   x_colors = rep("red",length(unique_samples))
   x_colors[unique_samples=="Mel_sc_5_CD45-"] = "blue"
@@ -180,8 +198,10 @@ if (useRibas)
   label_samples = str_replace(label_samples,"nsclc_","")
   label_samples = str_replace(label_samples,"BI5_","")
   label_samples = str_replace(label_samples,"cpoi_uvealprimarydata_","")
+  label_samples[label_samples=="Bz"] = ""
   label_samples[label_samples=="Mz"] = ""
-  label_samples[label_samples=="Nz"] = ""
+  label_samples[label_samples=="NSCLCz"] = ""
+  label_samples[label_samples=="Uz"] = ""
 
   coul = brewer.pal(9,"Set1")
   scatter_colors = colorRampPalette(coul)(length(unique(bardf$celltype)))
@@ -189,10 +209,9 @@ if (useRibas)
   names(scatter_colors) = unique(bardf$celltype)
   scatter_colors = scatter_colors[order(names(scatter_colors))]
 
-  xlab_string = paste0(strrep(" ",24),"NSCLC",strrep(" ",24),strrep(" ",20),"Mel",strrep(" ",20),strrep(" ",10),"UM",strrep(" ",10))
+  xlab_string = paste0(strrep(" ",30),"NSCLC",strrep(" ",27),strrep(" ",30),"Mel",strrep(" ",27),strrep(" ",16),"UM",strrep(" ",13),strrep(" ",10),"BI5 slyper",strrep(" ",10),strrep(" ",10),"NR1 slyper",strrep(" ",10))
 
   print(ggplot(bardf2, aes(fill=celltype, y=frequency, x=sample, color="black")) + scale_fill_manual(breaks = names(scatter_colors), values = scatter_colors) + scale_colour_manual(breaks = c("black"), values = c("black")) + scale_x_discrete(limits = unique_samples, labels=label_samples) + geom_bar(position="fill", stat="identity") + guides(color = "none") + xlab(xlab_string) + theme(axis.text.x = element_text(angle = 90, hjust = 1, color = x_colors), axis.title.x = element_text(angle = 0, hjust = 0)))
-)
   dev.off()
 
   malig_df = data.frame(sample=character(), malignant=character(), frequency=integer())
@@ -203,7 +222,7 @@ if (useRibas)
     tempdf = data.frame(sample=unique_sample, malignant="No", frequency=sum(bardf2$frequency[bardf2$sample==unique_sample & !(bardf2$celltype %in% c("Melanoma cells","Lung cancer cells"))]))
     malig_df = rbind(malig_df, tempdf)
   }
-  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_malignant.pdf"),height=7,width=8)
+  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_malignant.pdf"),height=7,width=12)
   print(ggplot(malig_df, aes(fill=malignant, y=frequency, x=sample, color="black")) + scale_fill_manual(breaks = c("Yes", "No"), values = c("red","blue")) + scale_colour_manual(breaks = c("black"), values = c("black")) + scale_x_discrete(limits = unique_samples, labels=label_samples) + geom_bar(position="fill", stat="identity") + guides(color = "none") + xlab(xlab_string) + theme(axis.text.x = element_text(angle = 90, hjust = 1, color = x_colors), axis.title.x = element_text(angle = 0, hjust = 0)))
   dev.off()
 
@@ -215,7 +234,7 @@ if (useRibas)
   simpsondf_temp = data.frame(sample="Nz",simpson_diversity=0)
   simpsondf = rbind(simpsondf, simpsondf_temp)
   simpsondf = simpsondf[order(simpsondf$sample),]
-  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_immune_simpson_diversity.pdf"),height=7,width=8)
+  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_immune_simpson_diversity.pdf"),height=7,width=12)
   theme_set(theme_bw())
   print(ggplot(simpsondf, aes(y=simpson_diversity, x=sample)) + geom_bar(stat="identity") + scale_x_discrete(limits = unique_samples, labels=label_samples) + ylab("Immune_Simpson Diversity") + xlab(xlab_string_simpson) + theme(axis.text.x = element_text(angle = 90, hjust = 1, color = x_colors), axis.title.x = element_text(angle = 0, hjust = 0)))
   dev.off()
@@ -226,7 +245,7 @@ if (useRibas)
   simpsondf_temp = data.frame(sample="Nz",simpson_diversity=0)
   simpsondf = rbind(simpsondf, simpsondf_temp)
   simpsondf = simpsondf[order(simpsondf$sample),]
-  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_nonimmune_simpson_diversity.pdf"),height=7,width=8)
+  pdf(paste0("fresh_vs_frozen_cell_comp/",outputname,"_nonimmune_simpson_diversity.pdf"),height=7,width=12)
   theme_set(theme_bw())
   print(ggplot(simpsondf, aes(y=simpson_diversity, x=sample)) + geom_bar(stat="identity") + scale_x_discrete(limits = unique_samples, labels=label_samples) + ylab("Nonimmune_Simpson Diversity") + ylim(c(0,1)) + xlab(xlab_string_simpson) + theme(axis.text.x = element_text(angle = 90, hjust = 1, color = x_colors), axis.title.x = element_text(angle = 0, hjust = 0)))
   dev.off()

@@ -11,7 +11,7 @@ library(limma)
 library(reshape2)
 library(circlize)
 
-useRibas = TRUE
+useRibas = FALSE
 if (useRibas) {
   patslist = list(c("ribas1_pre_tcr_S35_L004","ribas1_on_tcr_S36_L004","ribas_310_on_later_previd_3_TCR"),c("ribas_319_pre_previd_1_TCR","ribas_319_on_previd_2_TCR"))
   #shortpatslist = list(c("ribas_310_pre","ribas_310_on","ribas_319_on_later"),c("ribas_319_pre","ribas_319_on"))
@@ -141,6 +141,10 @@ for (z in 1:length(patslist))
 	print("hypergeom")
 	print(pats[i])
 	print(pats[j])
+	print(length(mutual_clonotypes))
+	print(length(names(rlelist_noncum[[i]])))
+	print(length(all_clonotypes)-length(names(rlelist_noncum[[i]])))
+	print(length(names(rlelist_noncum[[j]])))
 	print(dhyper(x=length(mutual_clonotypes), m=length(names(rlelist_noncum[[i]])), n=length(all_clonotypes)-length(names(rlelist_noncum[[i]])), k=length(names(rlelist_noncum[[j]]))))
       }
     }

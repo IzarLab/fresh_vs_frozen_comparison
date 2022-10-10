@@ -315,9 +315,9 @@ for (i in 1:length(prefix_arr))
   }
 
   #plot values of diffusion components 1-10 on gene expression umaps of t-cells
-  for(dcidx = 1:10)
+  for(dcidx in 1:10)
   {
-    seu$DC1 = dm$DC1
+    eval(parse(text=paste0("seu$DC",dcidx," = dm$DC",dcidx)))
   }
 
   if (prefix_arr[i]=="cd8")

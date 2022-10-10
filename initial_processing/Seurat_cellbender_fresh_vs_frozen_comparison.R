@@ -45,25 +45,46 @@ library(grid)
 #   c(7000,4500,4000,7000,9000,6000),
 #   c(8500,9000,6000,8000))
 
-foldersList = c("s3://fresh-vs-frozen-comparison/nsclc")
+# downsampled parameters
+foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
+  "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",
+  "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
+  "s3://fresh-vs-frozen-comparison-ohio/nsclc",
+  "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
 
-patsList = list(c("NSCL_NR001_SNSEQ_5P_WI_BRAIN_GEX"))
+patsList = list(c("CD45negGEXBI5_S1_L001","CD45posGEXBI5_S1_L001"),
+  c("bi005-skcm-5snseq","bi005-skcm","skcm-bi005-5pv2-snseq"),
+  c("UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-GEX-E12","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-GEX-F1","UMEL-CUUM1-SNRNA-5P-WI-PRIMARY-GEX-F12"),
+  c("NSCL_NR001_SCRNA_5P_NA_BRAIN_GEX","NSCL_NR001_SNSEQ_3P_NI_BRAIN_GEX","NSCL_NR001_SNSEQ_3P_WI_BRAIN_GEX","NSCL_NR001_SNSEQ_5P_NI_BRAIN_GEX","NSCL_NR001_SNSEQ_5P_WI_BRAIN_GEX","NSCL-NR001-5pv2-snseq"),
+  c("BI5CST","BI5TST","NR1CST","NR1TST"))
 
-maxCountsList = list(c(40000))
-maxFeaturesList = list(c(9000))
+maxCountsList = list(c(40000,18000),c(18000,10000,15000),c(45000,10000,15000),c(15000,13000,9000,12000,12000,13000),c(10000,10000,1000,800))
+maxFeaturesList = list(c(6500,4000),c(6000,4500,6000),c(7000,4000,6000),c(4000,5000,4000,5000,5000,5000),c(4500,4500,700,600))
 
 loadPrevRDS = FALSE
+use_downsampled = TRUE
 
 # for (z1 in 1:length(foldersList))
 # {
 #   pats = patsList[[z1]]
 #   for (z in 1:length(pats))
 #   {
-#     system(paste0("aws s3 cp ",foldersList[z1],"/cellbender/",pats[z],"/",pats[z],"_filtered.h5 /data/",pats[z],"_filtered.h5"))
+#     if (use_downsampled)
+#     {
+#       system(paste0("aws s3 cp ",foldersList[z1],"/cellbender_downsampled/",pats[z],"/",pats[z],"_filtered.h5 /data/",pats[z],"_filtered.h5"))
+#     }
+#     else
+#     {
+#       system(paste0("aws s3 cp ",foldersList[z1],"/cellbender/",pats[z],"/",pats[z],"_filtered.h5 /data/",pats[z],"_filtered.h5"))
+#     }
 #     #pat<-commandArgs()[6]
 #     #doubs<-as.numeric(commandArgs()[7])
 #     pat = pats[z]#"uv001_uvmel_snseq_3p_pre"
 #     doubs = .096
+#     if (foldersList[z1]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+#     {
+#       doubs = .0047
+#     }
 #     print(pat)
 #     print(doubs) #0.096 or 0.04
 
@@ -96,7 +117,14 @@ loadPrevRDS = FALSE
 #     seu_raw[['ScrubDoublet']]<-scrubletoutput$predicted_doublets
 #     seu_raw[['ScrubDoublet_score']]<-scrubletoutput$doublet_scores
 
-#     pdf(file = paste0("/data/plots_", pat,"_raw_check.pdf"))
+#     if (use_downsampled)
+#     {
+#       pdf(file = paste0("/data/plots_", pat,"_downsampled_raw_check.pdf"))
+#     }
+#     else
+#     {
+#       pdf(file = paste0("/data/plots_", pat,"_raw_check.pdf"))
+#     }
 
 #     print(qplot(x=seu_raw@meta.data$nCount_RNA,y = seu_raw@meta.data$nFeature_RNA, col=seu_raw@meta.data$percent.mt, xlab = "nCount_RNA",
 # 	 ylab = "nFeature_RNA", main =paste0(seu_raw@meta.data$orig.ident[1], " raw data: nCount_RNA vs. nFeature_RNA")) + scale_colour_gradient(low="blue", high="green") + labs(color = "Percent MT") + theme_classic())
@@ -126,11 +154,22 @@ for (z1 in 1:length(foldersList))
   maxFeatures = maxFeaturesList[[z1]]
   for (z in 1:length(pats))
   {
-    system(paste0("aws s3 cp ",foldersList[z1],"/cellbender/",pats[z],"/",pats[z],"_filtered.h5 /data/",pats[z],"_filtered.h5"))
+    if (use_downsampled)
+    {
+      system(paste0("aws s3 cp ",foldersList[z1],"/cellbender_downsampled/",pats[z],"/",pats[z],"_filtered.h5 /data/",pats[z],"_filtered.h5"))
+    }
+    else
+    {
+      system(paste0("aws s3 cp ",foldersList[z1],"/cellbender/",pats[z],"/",pats[z],"_filtered.h5 /data/",pats[z],"_filtered.h5"))
+    }
     #pat<-commandArgs()[6]
     #doubs<-as.numeric(commandArgs()[7])
     pat = pats[z]#"uv001_uvmel_snseq_3p_pre"
     doubs = .096
+    if (foldersList[z1]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+    {
+      doubs = .0047
+    }
     print(pat)
     print(doubs) #0.096 or 0.04
 
@@ -204,44 +243,44 @@ for (z1 in 1:length(foldersList))
 	# marker_table <- seu.markers %>% group_by(cluster) %>% top_n(n = 20, wt = avg_log2FC)
 	# write.csv(marker_table,paste0('markers_',pat,'_cellbender.csv'),row.names = F)
 
-	### cellt type identification
-	seu_sce <- as.SingleCellExperiment(seu)
+	# ### cellt type identification
+	# seu_sce <- as.SingleCellExperiment(seu)
 
-	bped<-BlueprintEncodeData()
-	pred_bped_main <- SingleR(test = seu_sce, ref = bped, labels = bped$label.main)
-	pruneScores(pred_bped_main)
-	seu[['celltype_bped_main']]<-pred_bped_main$pruned.labels
-	pred_bped_fine <- SingleR(test = seu_sce, ref = bped, labels = bped$label.fine)
-	pruneScores(pred_bped_fine)
-	seu[['celltype_bped_fine']]<-pred_bped_fine$pruned.labels
+	# bped<-BlueprintEncodeData()
+	# pred_bped_main <- SingleR(test = seu_sce, ref = bped, labels = bped$label.main)
+	# pruneScores(pred_bped_main)
+	# seu[['celltype_bped_main']]<-pred_bped_main$pruned.labels
+	# pred_bped_fine <- SingleR(test = seu_sce, ref = bped, labels = bped$label.fine)
+	# pruneScores(pred_bped_fine)
+	# seu[['celltype_bped_fine']]<-pred_bped_fine$pruned.labels
 
-	iced<-DatabaseImmuneCellExpressionData()
-	pred_iced_main <- SingleR(test = seu_sce, ref = iced, labels = iced$label.main)
-	pruneScores(pred_iced_main)
-	seu[['celltype_iced_main']]<-pred_iced_main$pruned.labels
-	pred_iced_fine <- SingleR(test = seu_sce, ref = iced, labels = iced$label.fine)
-	pruneScores(pred_iced_fine)
-	seu[['celltype_iced_fine']]<-pred_iced_fine$pruned.labels
+	# iced<-DatabaseImmuneCellExpressionData()
+	# pred_iced_main <- SingleR(test = seu_sce, ref = iced, labels = iced$label.main)
+	# pruneScores(pred_iced_main)
+	# seu[['celltype_iced_main']]<-pred_iced_main$pruned.labels
+	# pred_iced_fine <- SingleR(test = seu_sce, ref = iced, labels = iced$label.fine)
+	# pruneScores(pred_iced_fine)
+	# seu[['celltype_iced_fine']]<-pred_iced_fine$pruned.labels
 
-	hpca<-HumanPrimaryCellAtlasData()
-	pred_hpca_main <- SingleR(test = seu_sce, ref = hpca, labels = hpca$label.main)
-	pruneScores(pred_hpca_main)
-	seu[['celltype_hpca_main']]<-pred_hpca_main$pruned.labels
-	print("HEREb")
-	pred_hpca_fine <- SingleR(test = seu_sce, ref = hpca, labels = hpca$label.fine)
-	print("HERE")
-	pruneScores(pred_hpca_fine)
-	print("HERE2")
-	seu[['celltype_hpca_fine']]<-pred_hpca_fine$pruned.labels
-	print("HERE3")
+	# hpca<-HumanPrimaryCellAtlasData()
+	# pred_hpca_main <- SingleR(test = seu_sce, ref = hpca, labels = hpca$label.main)
+	# pruneScores(pred_hpca_main)
+	# seu[['celltype_hpca_main']]<-pred_hpca_main$pruned.labels
+	# print("HEREb")
+	# pred_hpca_fine <- SingleR(test = seu_sce, ref = hpca, labels = hpca$label.fine)
+	# print("HERE")
+	# pruneScores(pred_hpca_fine)
+	# print("HERE2")
+	# seu[['celltype_hpca_fine']]<-pred_hpca_fine$pruned.labels
+	# print("HERE3")
 
-	mid<-MonacoImmuneData()
-	pred_mid_main <- SingleR(test = seu_sce, ref = mid, labels = mid$label.main)
-	pruneScores(pred_mid_main)
-	seu[['celltype_mid_main']]<-pred_mid_main$pruned.labels
-	pred_mid_fine <- SingleR(test = seu_sce, ref = mid, labels = mid$label.fine)
-	pruneScores(pred_mid_fine)
-	seu[['celltype_mid_fine']]<-pred_mid_fine$pruned.labels
+	# mid<-MonacoImmuneData()
+	# pred_mid_main <- SingleR(test = seu_sce, ref = mid, labels = mid$label.main)
+	# pruneScores(pred_mid_main)
+	# seu[['celltype_mid_main']]<-pred_mid_main$pruned.labels
+	# pred_mid_fine <- SingleR(test = seu_sce, ref = mid, labels = mid$label.fine)
+	# pruneScores(pred_mid_fine)
+	# seu[['celltype_mid_fine']]<-pred_mid_fine$pruned.labels
       }
     }
 
@@ -364,50 +403,57 @@ for (z1 in 1:length(foldersList))
 
       print("scores")
 
-      ## bped
-      plotScoreHeatmap(pred_bped_fine, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_bped_fine')
-      DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_fine',repel = T,label.size = 2.5) + 
-	ggtitle('celltype_bped_fine') +
-	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
-	theme(legend.text=element_text(size=6))
+      # ## bped
+      # plotScoreHeatmap(pred_bped_fine, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_bped_fine')
+      # DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_fine',repel = T,label.size = 2.5) + 
+      # 	ggtitle('celltype_bped_fine') +
+      # 	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
+      # 	theme(legend.text=element_text(size=6))
 
-      ## bped
-      plotScoreHeatmap(pred_bped_main, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_bped_main')
-      DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_main',repel = T,label.size = 2.5) + 
-	ggtitle('celltype_bped_main') +
-	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
-	theme(legend.text=element_text(size=6))
+      # ## bped
+      # plotScoreHeatmap(pred_bped_main, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_bped_main')
+      # DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_main',repel = T,label.size = 2.5) + 
+      # 	ggtitle('celltype_bped_main') +
+      # 	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
+      # 	theme(legend.text=element_text(size=6))
 
-      ## hpca
-      plotScoreHeatmap(pred_hpca_fine, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_hpca_fine')
-      DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_fine',repel = T,label.size = 2.5) + 
-	ggtitle('celltype_hpca_fine') +
-	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
-	theme(legend.text=element_text(size=6))
+      # ## hpca
+      # plotScoreHeatmap(pred_hpca_fine, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_hpca_fine')
+      # DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_fine',repel = T,label.size = 2.5) + 
+      # 	ggtitle('celltype_hpca_fine') +
+      # 	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
+      # 	theme(legend.text=element_text(size=6))
 
-      ## hpca
-      plotScoreHeatmap(pred_hpca_main, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_hpca_main')
-      DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_main',repel = T,label.size = 2.5) + 
-	ggtitle('celltype_hpca_main') +
-	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
-	theme(legend.text=element_text(size=6))
+      # ## hpca
+      # plotScoreHeatmap(pred_hpca_main, clusters=seu_sce@colData$ident,fontsize = 6,main='pred_hpca_main')
+      # DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_main',repel = T,label.size = 2.5) + 
+      # 	ggtitle('celltype_hpca_main') +
+      # 	guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) +
+      # 	theme(legend.text=element_text(size=6))
 
-      print("dims")
+      # print("dims")
 
-      print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_fine', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_bped_fine"))
-      print("1")
-      print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_main', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_bped_main"))
-      print("2")
-      #print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_fine', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_hpca_fine"))
-      print("3")
-      print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_main', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_hpca_main"))
-      print("4")
+      # print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_fine', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_bped_fine"))
+      # print("1")
+      # print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_bped_main', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_bped_main"))
+      # print("2")
+      # #print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_fine', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_hpca_fine"))
+      # print("3")
+      # print(DimPlot(seu, reduction = "umap",label = T,group.by = 'celltype_hpca_main', repel = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=4)) + ggtitle("celltype_hpca_main"))
+      # print("4")
 
-      print("off")
+      # print("off")
 
       dev.off()
 
-      system(paste0("aws s3 sync /data/",pat,"_final_thresh ",foldersList[z1],"/Seurat/",pat,"_final_thresh"))
+      if (use_downsampled)
+      {
+        system(paste0("aws s3 sync /data/",pat,"_final_thresh ",foldersList[z1],"/Seurat_downsampled/",pat,"_final_thresh"))
+      }
+      else
+      {
+        system(paste0("aws s3 sync /data/",pat,"_final_thresh ",foldersList[z1],"/Seurat/",pat,"_final_thresh"))
+      }
       system(paste0("rm /data/",pat,"_final_thresh/",pat,"_final_thresh_cb.rds"))
       system(paste0("rm /data/",pat,"_filtered.h5"))
 

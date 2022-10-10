@@ -2,6 +2,7 @@ library(rlist)
 library(ggplot2)
 library(Seurat)
 library(infercnv)
+library(stringr)
 
 foldersList = c("",
   "",
@@ -9,7 +10,7 @@ foldersList = c("",
   "")
 integrated_name_arr = c("reannotate_ribas_melanoma_merged_tcells","reannotate_uveal_melanoma_tcells_reintegrated_with_1_subclustered_dim_num_25_then_15","fresh_vs_frozen_tcells_reannotate_BI5","fresh_vs_frozen_tcells_reannotate_cpoi-uvealprimarydata")
 dataset_names = c("ribas","UMEL","BI5","UM")
-for (i in 1:4) {
+for (i in 3:4) {
   seu = readRDS(paste0("/data/",integrated_name_arr[i],".rds"))
   DefaultAssay(seu) = "RNA"
 
@@ -41,8 +42,14 @@ for (i in 1:4) {
     seu <- RunUMAP(object = seu, dims = 1:dim_num)
   }
 
-  source("assign_TCR_clonality.R")
+  source("fresh_vs_frozen_comparison/TCR_analyses/assign_TCR_clonality.R")
   seu = assign_TCR_clonality(seu, dataset_names[i])
+
+  if (dataset_names[i]=="UM")
+  {
+    writetable = data.frame(barcode = seu$barebarcodes, orig.ident = seu$orig.ident, clonality = seu$clonality, clonality_group = seu$clonality_group)
+    write.table(writetable, "uveal_melanoma_tcell_clonality.csv", sep=",", quote=F, col.names=T, row.names=F)
+  }
 
   highlight_list = list()
   clone_numbers = sort(unique(seu$clonality))
@@ -89,6 +96,7 @@ for (i in 1:4) {
   pdf(paste0(integrated_name_arr[i],"_clonality_umap.pdf"),height=7,width=12)
   umap_df = data.frame(UMAP_1=seu@reductions$umap[[,1]], UMAP_2=seu@reductions$umap[[,2]], clonality_group=seu$clonality_group)
   theme_set(theme_bw())
+  print(DimPlot(seu, reduction = "umap", label = T, group.by = "fresh_frozen", repel = T, label.size = 3, shuffle = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=10)) + ggtitle("fresh_frozen"))
   print(DimPlot(seu, reduction = "umap", label = T, group.by = "orig.ident", repel = T, label.size = 3, shuffle = T) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=10)) + ggtitle("orig.ident"))
   print(ggplot(umap_df) + geom_point(aes(x=UMAP_1, y=UMAP_2, color=clonality_group, size=clonality_group)) + scale_color_manual(values=clonality_palette, breaks=names(clonality_palette)) + scale_size_manual(values=point_scale, breaks=names(point_scale)) + xlab("UMAP_1") + ylab("UMAP_2") + guides(color = guide_legend(title="Clonality"), size = "none"))
 
@@ -101,4 +109,5 @@ for (i in 1:4) {
     print(FeaturePlot(seu, features = c("TOP2A","MKI67","TOX","TCF7"), min.cutoff = "1", max.cutoff = "3"))
   }
   dev.off()
+  #nonsense = nonsense+1
 }

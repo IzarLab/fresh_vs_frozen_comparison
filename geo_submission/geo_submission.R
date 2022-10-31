@@ -19,22 +19,33 @@ library(dplyr)
 
 # nonsense = nonsense+1
 
-foldersList = c("",
-  "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
-  "s3://fresh-vs-frozen-comparison-ohio/nsclc",
-  "",
-  "s3://uveal-melanoma")
-integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc","ribas_310","um_all")
-integrated_name_arr_underscore = c("Mel","UM","NSCLC","ribas","UMEL")
+# foldersList = c("",
+#   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
+#   "s3://fresh-vs-frozen-comparison-ohio/nsclc",
+#   "",
+#   "s3://uveal-melanoma")
+# integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc","ribas_310","um_all")
+# integrated_name_arr_underscore = c("Mel","UM","NSCLC","ribas","UMEL")
 
+foldersList = c("s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
+  "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+integrated_name_arr = c("BI5","NR1")
+integrated_name_arr_underscore = c("BI5","NR1")
+
+counts_dim_arr = c()
 for (i in 1:length(foldersList)) {
-  if (i==1)
+  if (integrated_name_arr[i]=="BI5" && foldersList[i]!="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
   {
     seu = readRDS("/data/fresh_vs_frozen_all_reannotate_BI5.rds")
   }
-  else if (i==4)
+  else if (integrated_name_arr[i]=="ribas_310")
   {
     seu = readRDS("/data/fresh_vs_frozen_all_reannotate_ribas_310.rds")
+  }
+  else if (foldersList[i]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  {
+    system(paste0("aws s3 cp ",foldersList[i],"/Seurat_downsampled/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    seu = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
   }
   else
   {
@@ -46,7 +57,7 @@ for (i in 1:length(foldersList)) {
   print(dim(seu))
   print(length(unique(seu$orig.ident)))
 
-  if (i==1)
+  if (integrated_name_arr[i]=="BI5" && foldersList[i]!="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
   {
     seu$orig.ident[seu$orig.ident=="CD45neg"] = "Mel_sc_5_CD45-"
     seu$orig.ident[seu$orig.ident=="CD45pos"] = "Mel_sc_5_CD45+"
@@ -54,13 +65,13 @@ for (i in 1:length(foldersList)) {
     seu$orig.ident[seu$orig.ident=="5pv2-snseq"] = "Mel_sn_5v2"
     seu$orig.ident[seu$orig.ident=="5snseq"] = "Mel_sn_5"
   }
-  else if (i==2)
+  else if (integrated_name_arr[i]=="cpoi-uvealprimarydata")
   {
     seu$orig.ident[seu$orig.ident=="SCRNA-5P-NA-E12"] = "UM_sc_5"
     seu$orig.ident[seu$orig.ident=="SCRNA-5P-NA-F1"] = "UM_sc_5_CD45+"
     seu$orig.ident[seu$orig.ident=="SNRNA-5P-WI-F12"] = "UM_sn_5_inhib"
   }
-  else if (i==3)
+  else if (integrated_name_arr[i]=="nsclc")
   {
     seu$orig.ident[seu$orig.ident=="SCRNA_5P_NA"] = "NSCLC_sc_5"
     seu$orig.ident[seu$orig.ident=="5pv2-snseq"] = "NSCLC_sn_5v2"
@@ -69,13 +80,13 @@ for (i in 1:length(foldersList)) {
     seu$orig.ident[seu$orig.ident=="SNSEQ_5P_NI"] = "NSCLC_sn_5"
     seu$orig.ident[seu$orig.ident=="SNSEQ_5P_WI"] = "NSCLC_sn_5_inhib"
   }
-  else if (i==4)
+  else if (integrated_name_arr[i]=="ribas_310")
   {
     seu$orig.ident[seu$orig.ident=="ribas_310_pre_GEX_5pv2_S26_L004"] = "ribas_pre"
     seu$orig.ident[seu$orig.ident=="ribas_310_on_GEX_5pv2_S27_L004"] = "ribas_on"
     seu$orig.ident[seu$orig.ident=="ribas_310_on_later_previd_3_GEX"] = "ribas_on_later"
   }
-  else if (i==5)
+  else if (integrated_name_arr[i]=="um_all")
   {
     seu$orig.ident[seu$orig.ident=="um_07_gk_pre_S4_L001"] = "UMEL_1_1"
     seu$orig.ident[seu$orig.ident=="um_07_gk_on_S8_L001"] = "UMEL_1_2"
@@ -98,16 +109,41 @@ for (i in 1:length(foldersList)) {
     seu$orig.ident[seu$orig.ident=="um_16_rs_on_S18_L003"] = "UMEL_7_2"
     seu$orig.ident[seu$orig.ident=="um_16_rs_post_S19_L003"] = "UMEL_7_3"
   }
+  else if (integrated_name_arr[i]=="BI5" && foldersList[i]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  {
+    seu = subset(seu, orig.ident %in% c("BI5CST","BI5TST"))
+  }
+  else if (integrated_name_arr[i]=="NR1" && foldersList[i]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  {
+    seu = subset(seu, orig.ident %in% c("NR1CST","NR1TST"))
+  }
 
-  write.csv(as.data.frame(seu@assays$integrated@data),paste0('/data/GEO/processed/',integrated_name_arr_underscore[i],'_processed_data.csv'))
+  if ((integrated_name_arr[i]=="BI5" || integrated_name_arr[i]=="NR1") && foldersList[i]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  {
+    write.csv(as.data.frame(seu@assays$integrated@data),paste0('/data/GEO/processed/',integrated_name_arr_underscore[i],'_slyper_processed_data.csv'))
+  }
+  else
+  {
+    write.csv(as.data.frame(seu@assays$integrated@data),paste0('/data/GEO/processed/',integrated_name_arr_underscore[i],'_processed_data.csv'))
+  }
+
   for (anident in unique(seu$orig.ident))
   {
     su = subset(seu, orig.ident==anident)
     system(paste0('mkdir /data/GEO/raw/',anident))
     write.csv(as.data.frame(su@assays$RNA@counts),paste0('/data/GEO/raw/',anident,'/',anident,'_raw_counts.csv'))
+    counts_dim_arr = c(counts_dim_arr, dim(su@assays$RNA@counts)[2])
   }
 
   seu$barcode = colnames(seu)
   metadata_df<- seu@meta.data %>% select(c('barcode','orig.ident','ScrubDoublet_score'))
-  write.csv(metadata_df,paste0('/data/GEO/processed/',integrated_name_arr_underscore[i],'_meta_data.csv'),row.names = F)
+
+  if ((integrated_name_arr[i]=="BI5" || integrated_name_arr[i]=="NR1") && foldersList[i]=="s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  {
+    write.csv(metadata_df,paste0('/data/GEO/processed/',integrated_name_arr_underscore[i],'_slyper_meta_data.csv'),row.names = F)
+  }
+  else
+  {
+    write.csv(metadata_df,paste0('/data/GEO/processed/',integrated_name_arr_underscore[i],'_meta_data.csv'),row.names = F)
+  }
 }

@@ -4,16 +4,19 @@ library(Seurat)
 library(infercnv)
 library(stringr)
 
+#load list of rds objects corresponding to each dataset
 foldersList = c("",
   "",
   "",
   "")
 integrated_name_arr = c("reannotate_ribas_melanoma_merged_tcells","reannotate_uveal_melanoma_tcells_reintegrated_with_1_subclustered_dim_num_25_then_15","fresh_vs_frozen_tcells_reannotate_BI5","fresh_vs_frozen_tcells_reannotate_cpoi-uvealprimarydata")
 dataset_names = c("ribas","UMEL","BI5","UM")
+display_individual_clonalities = FALSE
 for (i in 3:4) {
   seu = readRDS(paste0("/data/",integrated_name_arr[i],".rds"))
   DefaultAssay(seu) = "RNA"
 
+  #extract specific seurat clusters or cell types corresponding to t-cells in each dataset
   if (dataset_names[i]=="ribas")
   {
     seu = subset(seu, seurat_clusters %in% c(0,1,2,3,4,6,7,9,10,11,12,14))
@@ -30,6 +33,7 @@ for (i in 3:4) {
   {
   }
 
+  #if specific seurat clusters were selected, recluster and rerun umap
   if (dataset_names[i]=="ribas" || dataset_names[i]=="UMEL")
   {
     dim_num = 15
@@ -42,42 +46,53 @@ for (i in 3:4) {
     seu <- RunUMAP(object = seu, dims = 1:dim_num)
   }
 
+  #assign TCR clonality groups to rds object using function
   source("fresh_vs_frozen_comparison/TCR_analyses/assign_TCR_clonality.R")
   seu = assign_TCR_clonality(seu, dataset_names[i])
 
+  #for uveal melanoma metastasis data only, write out csv file containing clonality and clonality_group information
   if (dataset_names[i]=="UM")
   {
     writetable = data.frame(barcode = seu$barebarcodes, orig.ident = seu$orig.ident, clonality = seu$clonality, clonality_group = seu$clonality_group)
     write.table(writetable, "uveal_melanoma_tcell_clonality.csv", sep=",", quote=F, col.names=T, row.names=F)
   }
 
-  highlight_list = list()
-  clone_numbers = sort(unique(seu$clonality))
-  if (length(clone_numbers)!=0)
+  #if display_individual_clonalities is TRUE, create list of cell barcodes corresponding to each clonality value
+  #label list using human-friendly clonality labels
+  if (display_individual_clonalities)
   {
-    seu$dummy_index = 1:length(seu$orig.ident)
-    for (i1 in 1:length(clone_numbers)) {
-      highlight_list = list.append(highlight_list,colnames(seu)[seu$clonality==clone_numbers[i1]])
-    }
-    display_numbers = as.character(clone_numbers)
-    for (i1 in 1:length(display_numbers))
+    highlight_list = list()
+    clone_numbers = sort(unique(seu$clonality))
+    if (length(clone_numbers)!=0)
     {
-      if (str_length(display_numbers[i1])==1)
-      {
-	display_numbers[i1] = paste0("0",display_numbers[i1])
+      seu$dummy_index = 1:length(seu$orig.ident)
+      for (i1 in 1:length(clone_numbers)) {
+	highlight_list = list.append(highlight_list,colnames(seu)[seu$clonality==clone_numbers[i1]])
       }
+      display_numbers = as.character(clone_numbers)
+      for (i1 in 1:length(display_numbers))
+      {
+	if (str_length(display_numbers[i1])==1)
+	{
+	  display_numbers[i1] = paste0("0",display_numbers[i1])
+	}
+      }
+      names(highlight_list) = paste0("Clonality: ", display_numbers)
     }
-    names(highlight_list) = paste0("Clonality: ", display_numbers)
   }
-
-  unique_clonality_groups = unique(seu$clonality_group)
-  highlight_list = list()
-  for (agroup in unique_clonality_groups)
+  else
   {
-    highlight_list = list.append(highlight_list, colnames(seu)[seu$clonality_group==agroup])
+    #otherwise, create list of cell barcodes corresponding to each clonality_group value
+    unique_clonality_groups = unique(seu$clonality_group)
+    highlight_list = list()
+    for (agroup in unique_clonality_groups)
+    {
+      highlight_list = list.append(highlight_list, colnames(seu)[seu$clonality_group==agroup])
+    }
+    names(highlight_list) = unique_clonality_groups
   }
-  names(highlight_list) = unique_clonality_groups
 
+  #use gray for cell barcodes not matched with TCR sequencing, yellow-red spectrum for expanded clonotypes, and either blue for all unexpanded clones, or additionally black and purple for CD4 and CD8 unexpanded clones
   if (i==1 || i==2)
   {
     clonality_palette = c("gray","blue",colorRampPalette(c("yellow","red"))(4))
@@ -93,6 +108,7 @@ for (i in 3:4) {
     names(point_scale) = names(clonality_palette)
   }
 
+  #print umaps of tcell by fresh/frozen status, original sample identity, and clonality group, as well as expression of cell cycle and exhaustion markers
   pdf(paste0(integrated_name_arr[i],"_clonality_umap.pdf"),height=7,width=12)
   umap_df = data.frame(UMAP_1=seu@reductions$umap[[,1]], UMAP_2=seu@reductions$umap[[,2]], clonality_group=seu$clonality_group)
   theme_set(theme_bw())

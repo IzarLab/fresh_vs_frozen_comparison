@@ -4,45 +4,31 @@ library(stringr)
 library(rlang)
 library(rlist)
 
-# foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
-#   "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",
-#   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
-#   "s3://fresh-vs-frozen-comparison-ohio/nsclc",
-#   "s3://melanoma-ribas/ribas1",
-#   "s3://uveal-melanoma",
-#   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
-#   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-# integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all","BI5","NR1")
-# integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","ribas","UMEL","BI5","NR1")
-
+#define list of s3 folders to download data from, names of each dataset, and alternate names that replace dashes with underscores
 foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
   "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",
   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
   "s3://fresh-vs-frozen-comparison-ohio/nsclc",
+  "s3://melanoma-ribas/ribas1",
   "s3://uveal-melanoma",
   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","um_all","BI5","NR1")
-integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","UMEL","BI5","NR1")
+integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all","BI5","NR1")
+integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","ribas","UMEL","BI5","NR1")
 
-# foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
-#   "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",
-#   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
-#   "s3://fresh-vs-frozen-comparison-ohio/nsclc",
-#   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
-#   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-# integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","BI5","NR1")
-# integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","BI5","NR1")
-
-# foldersList = c("s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-# integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all","slyper_pipeline")
-# integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","ribas","UMEL","slyper")
-
+#set options for using downsampled data from s3, and showing all stress signatures versus just one
 use_downsampled = FALSE
 possible_downsampled_suffix = ""
 if (use_downsampled) {
   possible_downsampled_suffix = "_downsampled"
 }
+heightParam = 7
+show_all_stress_sigs = TRUE
+if (show_all_stress_sigs) {
+  heightParam = 21
+}
+
+#read in table of ensembl gene ids mapped to hgnc ids, remove ensembl ids that map to more than one hgnc id
 ensembl_gene_to_hgnc = read.table("mart_export_ensembl_gene_to_hgnc.txt",quote=NULL,header=T,sep="\t")
 dup_ids_temp = table(ensembl_gene_to_hgnc$HGNC_symbol)
 dup_ids = names(dup_ids_temp)[dup_ids_temp>1]
@@ -53,10 +39,19 @@ ensembl_gene_to_hgnc[["HGNC_symbol"]] = NULL
 #load in stress signature genes
 source("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_comparison/QC_metrics/load_stress_sigs.R")
 
+#either show all stress signature results, or just results from nature methods paper for celseq
+if (show_all_stress_sigs) {
+  stress_sigs_to_plot = stress_sig_names
+} else {
+  stress_sigs_to_plot = c("stress_sig_nmeth_celseq")
+}
+
+#read in interferon-gamma signature from ribas data and add to stress_signature list
 ribas_ifng_sig = read.table("ribas_ifng_sig.txt", header = F, sep = ",")
 stress_sig_list = list.append(stress_sig_list, ribas_ifng_sig)
 names(stress_sig_list)[length(stress_sig_list)] = "ribas_ifng_sig"
 stress_sig_list_orig = stress_sig_list
+#if using downsampled data, and therefore measuring ribas stress signature, change ensembl gene ids to hgnc
 if (use_downsampled)
 {
   for (stress_sig in names(stress_sig_list))
@@ -102,7 +97,7 @@ for (i in 1:2) {
 source("merge.SCTAssay.R")
 seu = merge.SCTAssay(x=object.list[1], y=object.list[2], merge.data = T, na.rm = T)
 
-pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/Mel_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=7,width=5.5*length(unique(seu$orig.ident)))
+pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/Mel_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=heightParam,width=5.5*length(unique(seu$orig.ident)))
 
 #rename BI5 sample names to shorter names for display in figure, add description of whether they are fresh or frozen
 uniqueidents = unique(seu$orig.ident)
@@ -134,11 +129,11 @@ for (i in 1:length(relabel_list))
 }
 
 #violin plot figure, using manually encoded upper limits for violins, and fresh samples colored blue, frozen red
-aplot = VlnPlot(seu, features = c("Mel_nFeature_RNA","Mel_percent.mt","Mel_stress_sig_nmeth_celseq1"), group.by = "orig.ident",pt.size = 0)# + geom_boxplot()
+aplot = VlnPlot(seu, features = c("Mel_nFeature_RNA","Mel_percent.mt",paste0("Mel_",stress_sigs_to_plot,"1")), group.by = "orig.ident",pt.size = 0)# + geom_boxplot()
 uniqueidents = unique(seu$orig.ident)
 ymax_arr = c(13000,25,3)
 ylabs_arr = c("# detected genes/cell","percent mitochondrial reads","expression of signature")
-for (z2 in 1:3) {
+for (z2 in 1:(2+length(stress_sigs_to_plot))) {
   colorsarr = rep("",length(uniqueidents))
   colorsarr[grep("fresh",uniqueidents)] = "blue"
   colorsarr[grep("frozen",uniqueidents)] = "red"
@@ -191,8 +186,12 @@ for (uniqueident in uniqueidents)
 }
 
 seu = readRDS("/data/fresh_vs_frozen_all_reannotate_BI5.rds")
-seu = AddModuleScore(seu, features = list(na.omit(stress_sig_list[["stress_sig_nmeth_celseq"]])), name = "stress_sig_nmeth_celseq", assay = "RNA", search = T)
+for (stress_sig in names(stress_sig_list))
+{
+  seu = AddModuleScore(seu, features = list(na.omit(stress_sig_list[[stress_sig]])), name = stress_sig, assay = "RNA", search = T)
+}
 
+#calculate QC median metrics for each cell type in rds object, as well as for all non-tumor cells generally
 for (an_orig_ident in unique(seu$orig.ident)) {
   seu_sub = subset(seu, orig.ident==an_orig_ident)
   cell_types_arr = unique(seu_sub$manual_annotation_label)
@@ -225,10 +224,11 @@ for (an_orig_ident in unique(seu$orig.ident)) {
   }
 }
 
+#make violin plot of cell-type specific quality metrics
 seu$orig.ident.bare = unlist(lapply(strsplit(seu$orig.ident,"\n"), function(x) {x[[1]][1]}))
 seu$cell_type_and_sample = paste0(seu$orig.ident.bare,"\n",seu$manual_annotation_label)
-pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/Mel_cell_type_QC.pdf"),height=21,width=3*length(unique(seu$cell_type_and_sample)))
-aplot = VlnPlot(seu, features = c("nFeature_RNA", "percent.mt", "stress_sig_nmeth_celseq1"), group.by = "cell_type_and_sample", pt.size = 0, ncol=1)
+pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/Mel_cell_type_QC.pdf"),height=3*heightParam,width=3*length(unique(seu$cell_type_and_sample)))
+aplot = VlnPlot(seu, features = c("nFeature_RNA", "percent.mt", paste0(stress_sigs_to_plot,"1")), group.by = "cell_type_and_sample", pt.size = 0, ncol=1)
 for (z2 in 1:3)
 {
   aplot[[z2]] = aplot[[z2]] + ylim(0,ymax_arr[z2]) + ylab(ylabs_arr[z2]) + theme(axis.text.x = element_text(angle=0, hjust=0.5))
@@ -306,7 +306,7 @@ for (i in 3:(length(foldersList))) {
     integrated_rds = subset(integrated_rds, placeholder)
   }
 
-  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=7,width=5.5*length(unique(integrated_rds$orig.ident)))
+  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=heightParam,width=5.5*length(unique(integrated_rds$orig.ident)))
 
   uniqueidents = unique(integrated_rds$orig.ident)
   source("fresh_vs_frozen_comparison/QC_metrics/rename_sample_IDs.R")
@@ -340,11 +340,11 @@ for (i in 3:(length(foldersList))) {
     relabel_list[i1] = substring(relabel_list[i1],3)
   }
 
-  aplot = VlnPlot(integrated_rds, features = c(paste0(integrated_name_arr_underscore[i],"_nFeature_RNA"),paste0(integrated_name_arr_underscore[i],"_percent.mt"),paste0(integrated_name_arr_underscore[i],"_stress_sig_nmeth_celseq1")), group.by = "orig.ident",pt.size = 0)
+  aplot = VlnPlot(integrated_rds, features = c(paste0(integrated_name_arr_underscore[i],"_nFeature_RNA"),paste0(integrated_name_arr_underscore[i],"_percent.mt"),paste0(integrated_name_arr_underscore[i],"_",stress_sigs_to_plot,"1")), group.by = "orig.ident",pt.size = 0)
   uniqueidents = sort(unique(integrated_rds$orig.ident))
   ymax_arr = c(13000,25,3)
   ylabs_arr = c("# detected genes/cell","percent mitochondrial reads","expression of signature")
-  for (z2 in 1:3)#length(aplot))
+  for (z2 in 1:(2+length(stress_sigs_to_plot)))#length(aplot))
   {
     colorsarr = rep("",length(uniqueidents))
     colorsarr[grep("fresh",uniqueidents)] = "blue"
@@ -485,8 +485,8 @@ for (i in 3:(length(foldersList))) {
     integrated_rds = subset(integrated_rds, temparr)
   }
   integrated_rds$cell_type_and_sample = paste0(integrated_rds$orig.ident.bare,"\n",integrated_rds$manual_annotation_label)
-  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_cell_type_QC.pdf"),height=21,width=3*length(unique(integrated_rds$cell_type_and_sample)))
-  aplot = VlnPlot(integrated_rds, features = c("nFeature_RNA", "percent.mt", "stress_sig_nmeth_celseq1"), group.by = "cell_type_and_sample", pt.size = 0, ncol=1)
+  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_cell_type_QC.pdf"),height=3*heightParam,width=3*length(unique(integrated_rds$cell_type_and_sample)))
+  aplot = VlnPlot(integrated_rds, features = c("nFeature_RNA", "percent.mt", paste0(stress_sigs_to_plot,"1")), group.by = "cell_type_and_sample", pt.size = 0, ncol=1)
   for (z2 in 1:3)
   {
     aplot[[z2]] = aplot[[z2]] + ylim(0,ymax_arr[z2]) + ylab(ylabs_arr[z2]) + theme(axis.text.x = element_text(angle=0, hjust=0.5))

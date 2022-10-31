@@ -1,3 +1,4 @@
+#given a Seurat object integrated_rds and the name of a dataset, rename the orig.ident field of integrated_rds to more human-readable names
 rename_IDs <- function(integrated_rds, dataset_name) {
   if (dataset_name=="Mel" || dataset_name=="BI5")
   {

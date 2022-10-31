@@ -11,6 +11,8 @@ library(limma)
 library(reshape2)
 library(circlize)
 
+#load in sample names for either ribas dataset, or cutaneous melanoma, uveal primary, and NSCLC datasets
+#create array of colors corresponding to either fresh or frozen samples to label circos plots
 useRibas = FALSE
 if (useRibas) {
   patslist = list(c("ribas1_pre_tcr_S35_L004","ribas1_on_tcr_S36_L004","ribas_310_on_later_previd_3_TCR"),c("ribas_319_pre_previd_1_TCR","ribas_319_on_previd_2_TCR"))
@@ -26,9 +28,7 @@ if (useRibas) {
   colorslist = list(c("blue","red"),c("blue","blue","red"),c("blue","red","red"))
 }
 
-# patslist = list(c("PA005","PA019","PA025","PA034","PA042","PA043","PA054","PA056","PA060","PA067","PA070","PA076","PA080","PA104","PA125","PA141"))
-# shortpatslist = patslist
-
+#set fullcolors argument, which determine whether circos plot colors will have alpha values of 1 or not
 fullcolors = TRUE
 if (useRibas) {
   pdf("ribas_melanoma_TCR_circos.pdf")
@@ -47,13 +47,16 @@ for (z in 1:length(patslist))
   shortpats = shortpatslist[[z]]
   colors = colorslist[[z]]
   contig_list<-c()
+  #read in list of contig annotations for each sample in dataset
   for(i in 1:length(pats)){
     contig_list[[i]] <- read.csv(paste0(pats[i],'/filtered_contig_annotations.csv'), stringsAsFactors = F)
   }
 
+  #create combined list of clonotypes across all samples using function
   combined <- combineTCR(contig_list, samples = pats, ID = pats, cells ="T-AB",filterMulti = F)
   names(combined)<- pats
 
+  #remove samples that have no clonotypes in result of combineTCR
   removepats = c()
   for (i in 1:length(combined))
   {
@@ -84,6 +87,7 @@ for (z in 1:length(patslist))
   combined <- combineTCR(contig_list, samples = pats, ID = pats, cells ="T-AB",filterMulti = F)
   names(combined)<- pats
 
+  #create dataframe with x and y coordinates for each sample in circos plot
   tcrdf = data.frame(sectors = rep(as.character(1:length(pats)),each=2), x = rep(c(0,3),times=length(pats)), y = rep(c(0,1),times=length(pats)))
 
   circos.par("track.height" = 0.1)
@@ -92,6 +96,8 @@ for (z in 1:length(patslist))
   rlelist = list()
   frequentrlelist = list()
   rlelist_noncum = list()
+  #sort clonotypes in combineTCR result object, then use rle function to determine lengths of each clonotype in descending order
+  #store results in rlelist_noncum
   for (i in 1:length(combined))
   {
     rleresult = rle(sort(combined[[i]]$CTgene))$lengths
@@ -118,6 +124,7 @@ for (z in 1:length(patslist))
     {
       if (i!=j)
       {
+        #determine clonotypes shared between any pair of samples, and their frequencies in each sample
 	mutual_clonotypes = intersect(names(rlelist_noncum[[i]]), names(rlelist_noncum[[j]]))
 	all_clonotypes = union(names(rlelist_noncum[[i]]), names(rlelist_noncum[[j]]))
 	commonrle_ith = rep(0, length(all_clonotypes))
@@ -160,6 +167,7 @@ for (z in 1:length(patslist))
     print(gini_val)
   }
 
+  #store a list of the names of clonotypes shared in common between each pair of samples
   common_clonotypes_list = list()
   common_clonotypes_names_list = c()
   for (i in 1:length(rlelist))
@@ -185,7 +193,8 @@ for (z in 1:length(patslist))
     }
   }
   names(common_clonotypes_list) = common_clonotypes_names_list
-    
+
+  #generate list of random colors to each associate with each clonotype
     common_clonotypes_all = unique(c(unlist(common_clonotypes_list)))
     if (fullcolors)
     {
@@ -202,7 +211,7 @@ for (z in 1:length(patslist))
     }
   #}
 
-
+  #make circos plot showing frequency of each clonotype in each sample
   circos.track(ylim = c(0, 1), panel.fun = function(x, y) {
       xlim = CELL_META$xlim
       ylim = CELL_META$ylim
@@ -227,6 +236,8 @@ for (z in 1:length(patslist))
       circos.rect(c(0,rleresult[1:length(rleresult)-1]), rep(0, length(rleresult)), rleresult, rep(1, length(rleresult)), col = colorvec, border = "black")
   })
 
+  #determine locations in circos plot of clonotypes shared between samples
+  #draw links between such shared clonotypes
   for (i1 in 1:length(common_clonotypes_list))
   {
     if (length(common_clonotypes_list[[i1]]>0))

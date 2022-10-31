@@ -75,7 +75,7 @@ for (i in 1:length(integrated_name_arr_underscore)) {
       uniqueidents_reorder = uniqueidents
       uniqueidents_reorder = uniqueidents_reorder[c(1,8,4,5,6,7,2,3)]
     }
-    aplot[[z2]] = aplot[[z2]] + scale_fill_manual(values = colorsarr, limits = uniqueidents) + scale_x_discrete(limits = uniqueidents_reorder, labels=relabel_list) + ylim(0,ymax_arr[z2]) + ylab(ylabs_arr[z2]) + theme(axis.text.x = element_text(angle=0, hjust=0.5), legend.position = "none")
+    aplot[[z2]] = aplot[[z2]] + scale_fill_manual(values = colorsarr, limits = uniqueidents) + scale_x_discrete(limits = uniqueidents_reorder, labels=relabel_list) + ylim(0,ymax_arr[z2]) + ylab(ylabs_arr[z2]) + theme(axis.text.x = element_text(angle=0, hjust=0.5), legend.position = "none") + geom_boxplot(fill="white",width=0.1)
   }
   AugmentPlot(aplot, dpi = 300)
   print(aplot)

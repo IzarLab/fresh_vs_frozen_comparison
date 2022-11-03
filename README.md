@@ -4,7 +4,8 @@
 Yiping Wang*, Joy Linyue Fan*, Johannes C. Melms*, Amit Dipak Amin, Yohanna Georgis, Irving Barrera, Patricia Ho, Somnath Tagore, Gabriel Abril-Rodríguez, Siyu He, Yinuo Jin, Jana Biermann, Matan Hofree, Lindsay Caprio, Simon Berhe, Shaheer A. Khan, Brian S. Henick, Antoni Ribas, Evan Z. Macosko, Fei Chen, Alison M. Taylor, Gary K. Schwartz, Richard D. Carvajal, Elham Azizi, Benjamin Izar
 <br>
 
-Overview of code structure and corresponding Figures and Tables can be found in `code_overview.xlsx`
+Overview of code structure and corresponding Figures and Tables can be found in `code_overview_fresh_vs_frozen_comparison.xlsx
+Some spatial analysis scripts, listed in code_overview_fresh_vs_frozen_comparison.xlsx, are not in this github repository, but in https://github.com/IzarLab/Melanoma_Brain_Metastasis/Spatial_analysis`
 
 ### Publication
 In Press

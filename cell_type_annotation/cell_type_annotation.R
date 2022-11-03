@@ -5,81 +5,83 @@ library(rlang)
 library(rlist)
 library(dplyr)
 
-# #load in BI5 scrna and snrna-seq samples, integrate, cluster, and store in rds file
-# integrate_BI5 = TRUE
-# if (integrate_BI5) {
-#   foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
-#     "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq")
-#   integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq")
+#load in BI5 cutaneous melanoma scrna and snrna-seq samples, integrate, cluster, and store in rds file
+integrate_BI5 = TRUE
+if (integrate_BI5) {
+  foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
+    "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq")
+  integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq")
 
-#   object.list = c()
-#   for (i in 1:2) {
-#     system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
-#     integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
-#     DefaultAssay(integrated_rds) = "RNA"
-#     object.list = c(object.list, integrated_rds)
-#   }
+  object.list = c()
+  for (i in 1:2) {
+    system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
+    DefaultAssay(integrated_rds) = "RNA"
+    object.list = c(object.list, integrated_rds)
+  }
 
-#   anchors = FindIntegrationAnchors(object.list = object.list, dims = 1:20)
-#   seu = IntegrateData(anchorset = anchors, dims = 1:20)
+  anchors = FindIntegrationAnchors(object.list = object.list, dims = 1:20)
+  seu = IntegrateData(anchorset = anchors, dims = 1:20)
 
-#   dimnum = 15
-#   seu = ScaleData(object = seu)
-#   seu = RunPCA(object = seu)
-#   seu = FindNeighbors(seu, dims = 1:15)
-#   seu = FindClusters(seu)
-#   seu = RunUMAP(object = seu, dims = 1:20)
+  dimnum = 15
+  seu = ScaleData(object = seu)
+  seu = RunPCA(object = seu)
+  seu = FindNeighbors(seu, dims = 1:15)
+  seu = FindClusters(seu)
+  seu = RunUMAP(object = seu, dims = 1:20)
 
-#   BI5_seu = seu
-#   saveRDS(BI5_seu,"/data/fresh_vs_frozen_all_reannotate_BI5.rds")
-# }
+  BI5_seu = seu
+  saveRDS(BI5_seu,"/data/fresh_vs_frozen_all_reannotate_BI5.rds")
+}
 
-# #load in ribas 310 samples, integrate, cluster, and store in rds file
-# integrate_ribas = TRUE
-# if (integrate_ribas) {
-#   ribas_samples = c("ribas_310_on_GEX_5pv2_S27_L004_titrate_thresh","ribas_310_on_later_previd_3_GEX_titrate_thresh","ribas_310_pre_GEX_5pv2_S26_L004_titrate_thresh")
-#   object.list = list()
-#   for (z in 1:length(ribas_samples)) {
-#     ribas_sample = ribas_samples[z]
-#     system(paste0("aws s3 cp s3://melanoma-ribas/ribas1/Seurat/",ribas_sample,"/",ribas_sample,"_cb.rds /data/",ribas_sample,"_cb.rds"))
-#     temp_rds = readRDS(paste0("/data/",ribas_sample,"_cb.rds"))
+#load in ribas 310 samples, integrate, cluster, and store in rds file
+integrate_ribas = TRUE
+if (integrate_ribas) {
+  ribas_samples = c("ribas_310_on_GEX_5pv2_S27_L004_titrate_thresh","ribas_310_on_later_previd_3_GEX_titrate_thresh","ribas_310_pre_GEX_5pv2_S26_L004_titrate_thresh")
+  object.list = list()
+  for (z in 1:length(ribas_samples)) {
+    ribas_sample = ribas_samples[z]
+    system(paste0("aws s3 cp s3://melanoma-ribas/ribas1/Seurat/",ribas_sample,"/",ribas_sample,"_cb.rds /data/",ribas_sample,"_cb.rds"))
+    temp_rds = readRDS(paste0("/data/",ribas_sample,"_cb.rds"))
 
-#     if (length(colnames(temp_rds))>=100)
-#     {
-#       object.list = c(object.list, temp_rds)
-#     }
-#     system(paste0("rm /data/",ribas_sample,"_cb.rds"))
-#   }
+    if (length(colnames(temp_rds))>=100)
+    {
+      object.list = c(object.list, temp_rds)
+    }
+    system(paste0("rm /data/",ribas_sample,"_cb.rds"))
+  }
 
-#   anchors = FindIntegrationAnchors(object.list = object.list, dims = 1:20)
-#   seu = IntegrateData(anchorset = anchors, dims = 1:20)
+  anchors = FindIntegrationAnchors(object.list = object.list, dims = 1:20)
+  seu = IntegrateData(anchorset = anchors, dims = 1:20)
 
-#   dimnum = 15
-#   seu = ScaleData(object = seu)
-#   seu = RunPCA(object = seu)
-#   seu = FindNeighbors(seu, dims = 1:15)
-#   seu = FindClusters(seu)
-#   seu = RunUMAP(object = seu, dims = 1:20)
+  dimnum = 15
+  seu = ScaleData(object = seu)
+  seu = RunPCA(object = seu)
+  seu = FindNeighbors(seu, dims = 1:15)
+  seu = FindClusters(seu)
+  seu = RunUMAP(object = seu, dims = 1:20)
 
-#   ribas_310_seu = seu
-#   saveRDS(ribas_310_seu,"/data/fresh_vs_frozen_all_reannotate_ribas_310.rds")
-# }
+  ribas_310_seu = seu
+  saveRDS(ribas_310_seu,"/data/fresh_vs_frozen_all_reannotate_ribas_310.rds")
+}
 
-foldersList = c("")#,
-#   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
-#   "s3://fresh-vs-frozen-comparison-ohio/nsclc",
-#   "",
-#   "s3://uveal-melanoma")
-integrated_name_arr = c("BI5")#,"cpoi-uvealprimarydata","nsclc","ribas_310","um_all")
+#define folder locations for data, depending on whether samples were processed by slyper pipeline or not
 using_slyper = FALSE
+if (using_slyper) {
+  foldersList = c("s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline","s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  integrated_name_arr = c("BI5","NR1")
+} else  {
+  foldersList = c(""),
+    "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
+    "s3://fresh-vs-frozen-comparison-ohio/nsclc",
+    "",
+    "s3://uveal-melanoma")
+  integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc","ribas_310","um_all")
+}
 calculateMarkers = FALSE
 
-# foldersList = c("s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline","s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-# integrated_name_arr = c("BI5","NR1")
-# using_slyper = TRUE
-# calculateMarkers = FALSE
-
 for (i in 1:length(foldersList)) {
+  #download rds objects and load into R
   if (integrated_name_arr[i]=="BI5" && !using_slyper)
   {
     seu = readRDS("/data/fresh_vs_frozen_all_reannotate_BI5.rds")
@@ -96,10 +98,12 @@ for (i in 1:length(foldersList)) {
 
   seu$manual_annotation_label[seu$manual_annotation_label==""] = "unknown"
 
+  #print umaps of seurat clusters and sample names
   pdf(paste0("fresh_vs_frozen_all_reannotate/fresh_vs_frozen_all_reannotate_",integrated_name_arr[i],".pdf"))
   print(DimPlot(seu, reduction = "umap", label = T, group.by = "seurat_clusters", repel = T, label.size = 3) + ggtitle(paste0('seurat_clusters')) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=10)))
   print(DimPlot(seu, reduction = "umap", label = T, group.by = "orig.ident", repel = T, label.size = 3) + ggtitle(paste0('orig.ident')) + guides(col = guide_legend(nrow = 30,override.aes = list(size=5))) + theme(legend.text=element_text(size=10)))
 
+  #add manual annotations based on seurat clustering and marker gene expression
   if (integrated_name_arr[i]!="um_all" && !using_slyper)
   {
     seu$manual_annotation_label = "unknown"
@@ -171,6 +175,7 @@ for (i in 1:length(foldersList)) {
 
   DefaultAssay(seu) = "RNA"
 
+  #print umaps of QC metrics and marker gene expression
   print(FeaturePlot(seu, features = c("nFeature_RNA","nCount_RNA","percent.mt","ScrubDoublet_score"), min.cutoff = "q9", max.cutoff = "q90"))
 
   #IG cells for B cells/plasma cells
@@ -201,6 +206,7 @@ for (i in 1:length(foldersList)) {
   }
   DefaultAssay(seu) = "integrated"
 
+  #if option is set, calculate marker genes for all clusters, and write out into table
   if (calculateMarkers)
   {
     allmarkers = FindAllMarkers(seu, only.pos = TRUE, min.pct = 0.25, logfc.threshold = 0.25)
@@ -210,6 +216,7 @@ for (i in 1:length(foldersList)) {
 
   dev.off()
 
+  #write out table of melanoma cells and cycling melanoma cells in uveal melanoma metastasis dataset
   seu$barebarcodes = unlist(lapply(strsplit(colnames(seu),"_"), function(x) x[1]))
   writeout_df = data.frame(barcode=seu$barebarcodes, orig.ident=seu$orig.ident, manual_annotation_label=seu$manual_annotation_label)
   if (integrated_name_arr[i]=="um_all")
@@ -219,6 +226,7 @@ for (i in 1:length(foldersList)) {
   }
   write.table(writeout_df,paste0(integrated_name_arr[i],"_manual_annotation_label.csv"),sep=",",col.names=T,row.names=F,quote=F)
 
+  #save results in rds files
   if (integrated_name_arr[i]=="BI5" && !using_slyper)
   {
     saveRDS(seu,"/data/fresh_vs_frozen_all_reannotate_BI5.rds")

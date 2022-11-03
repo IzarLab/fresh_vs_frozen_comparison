@@ -5,19 +5,23 @@ library(rlang)
 library(rlist)
 library(dplyr)
 
-# foldersList = c("",
-#   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
-#   "s3://fresh-vs-frozen-comparison-ohio/nsclc",
-#   "s3://melanoma-ribas/ribas1",
-#   "s3://uveal-melanoma")
-# integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all")
-
-foldersList = c("s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline","s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-integrated_name_arr = c("BI5","NR1")
-using_slyper = TRUE
+#load list of folders for each datasets, depending on whether samples were processed by slyper protocol or not
+using_slyper = FALSE
+if (using_slyper) {
+  foldersList = c("s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline","s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
+  integrated_name_arr = c("BI5","NR1")
+} else {
+  foldersList = c("",
+    "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
+    "s3://fresh-vs-frozen-comparison-ohio/nsclc",
+    "s3://melanoma-ribas/ribas1",
+    "s3://uveal-melanoma")
+  integrated_name_arr = c("BI5","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all")
+}
 
 pdf("fresh_vs_frozen_all_reannotate/fresh_vs_frozen_all_reannotate_heatmap.pdf",height=25,width=25)
 for (i in 1:length(integrated_name_arr)) {
+  #download and load in data
   if (integrated_name_arr[i]=="BI5" && !using_slyper)
   {
     seu = readRDS("/data/fresh_vs_frozen_all_reannotate_BI5.rds")
@@ -31,8 +35,10 @@ for (i in 1:length(integrated_name_arr)) {
   DefaultAssay(seu)<-'RNA'
   seu<-NormalizeData(seu) %>% ScaleData()
   DefaultAssay(seu)<-'integrated'
-  
+
+  #generate markers for each cluster in dataset
   allmarkers = read.table(paste0("fresh_vs_frozen_all_reannotate/fresh_vs_frozen_all_reannotate_",integrated_name_arr[i],"_markers.csv"), header=T, quote=NULL, sep=",")
+  #remove certain cluster markers depending on dataset, to allow heatmap to be rendered correctly
   if (integrated_name_arr[i]=="nsclc")
   {
     allmarkers = allmarkers[allmarkers$cluster!=0,]
@@ -53,6 +59,7 @@ for (i in 1:length(integrated_name_arr)) {
     seu = subset(seu, placeholder)
   }
 
+  #print heatmap of top 10 markers for each cluster
   top10 <- allmarkers %>% group_by(cluster) %>% top_n(n = 10, wt = avg_log2FC)
   print(DoHeatmap(seu, features = top10$gene, raster = T, assay = "RNA") + NoLegend() + ggtitle(paste0(integrated_name_arr[i]," DEG Heatmap")))
 

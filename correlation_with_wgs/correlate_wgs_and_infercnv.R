@@ -30,9 +30,9 @@ tumorfractions = c(.2528,.8325,
 infercnvpats = c("um_07_gk_on_S8_L001","um_07_gk_pre_S4_L001","um_08_ar_on_S2_L001","um_08_ar_post_S3_L001","um_08_ar_pre_S1_L001","um_09_mw_on_S6_L001","um_09_mw_post_S7_L001","um_09_mw_pre_S5_L001","um_11_lc_on_S16_L002","um_11_lc_pre_S12_L002","um_12_ml_on_S10_L002","um_12_ml_post_S11_L002","um_12_ml_pre_S9_L002","um_15_lm_on_S14_L002","um_15_lm_post_S15_L002","um_16_rs_on_S18_L003")
 
 chrlengths = c(248956422,242193529,198295559,190214555,181538259,170805979,159345973,145138636,138394717,133797422,135086622,133275309,114364328,107043718,101991189,90338345,83257441,80373285,58617616,64444167,46709983,50818468)
-hinges = c(123400000,93900000,90900000,50000000,48800000,59800000,60100000,45200000,43000000,39800000,53400000,35500000,17700000,17200000,19000000,36800000,25100000,18500000,26200000,28100000,12000000,15000000)
+centromere_locations = c(123400000,93900000,90900000,50000000,48800000,59800000,60100000,45200000,43000000,39800000,53400000,35500000,17700000,17200000,19000000,36800000,25100000,18500000,26200000,28100000,12000000,15000000)
 names(chrlengths) = c("chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22")
-names(hinges) = c("chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22")
+names(centromere_locations) = c("chr1","chr2","chr3","chr4","chr5","chr6","chr7","chr8","chr9","chr10","chr11","chr12","chr13","chr14","chr15","chr16","chr17","chr18","chr19","chr20","chr21","chr22")
 
 if (!skipIndividualCalc) {
   infercnvarr_across_segments_median_across_samples = c()
@@ -158,12 +158,12 @@ if (!skipIndividualCalc) {
 	wgsarr_across_segments_median = c(wgsarr_across_segments_median,median(wgsarr))
 	infercnvarr_across_segments_median = c(infercnvarr_across_segments_median,median(infercnvarr))
 
-	hingelocation = hinges[[paste0("chr",wgsdata$chr[i])]]
-	if (wgsdata$start[i]<=hingelocation && wgsdata$end[i]>=hingelocation)
+	centromere_location = centromere_locations[[paste0("chr",wgsdata$chr[i])]]
+	if (wgsdata$start[i]<=centromere_location && wgsdata$end[i]>=centromere_location)
 	{
 	  anarm = paste0("chr",wgsdata$chr[i],"p"," and ","chr",wgsdata$chr[i],"q")
 	}
-	else if (wgsdata$start[i]<=hingelocation)
+	else if (wgsdata$start[i]<=centromere_location)
 	{
 	  anarm = paste0("chr",wgsdata$chr[i],"p")
 	}
@@ -197,9 +197,9 @@ for (i in 1:length(uniquesamples))
 {
   for (j in 1:length(chrlengths))
   {
-    tempdf = data.frame(sample=uniquesamples[i],shortchr=substring(names(chrlengths)[j],4),chr=paste0(names(chrlengths)[j],"p"),start=1,end=hinges[j])
+    tempdf = data.frame(sample=uniquesamples[i],shortchr=substring(names(chrlengths)[j],4),chr=paste0(names(chrlengths)[j],"p"),start=1,end=centromere_locations[j])
     armdf = rbind(armdf, tempdf)
-    tempdf = data.frame(sample=uniquesamples[i],shortchr=substring(names(chrlengths)[j],4),chr=paste0(names(chrlengths)[j],"q"),start=hinges[j]+1,end=chrlengths[j])
+    tempdf = data.frame(sample=uniquesamples[i],shortchr=substring(names(chrlengths)[j],4),chr=paste0(names(chrlengths)[j],"q"),start=centromere_locations[j]+1,end=chrlengths[j])
     armdf = rbind(armdf, tempdf)
   }
 }

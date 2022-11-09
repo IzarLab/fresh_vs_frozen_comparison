@@ -18,6 +18,9 @@ import seaborn as sns
 
 from distributed import Client, LocalCluster
 
+### title: Run scenic for each sample in sequential cutaneous melanoma dataset
+### author: Yiping Wang date: 11/08/2022
+
 if __name__=="__main__":
 
     tf_names = load_tf_names("hs_hgnc_curated_tfs.txt")

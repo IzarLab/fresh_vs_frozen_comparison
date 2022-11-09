@@ -1,3 +1,6 @@
+### title: Assign TCR clonality information to T cells to rds files for a particular dataset
+### author: Yiping Wang date: 11/08/2022
+
 assign_TCR_clonality <- function(seu, dataset_name) {
   #rename orig.ident to more human-readable names
   seu$orig.ident[seu$orig.ident=="ribas_310_on"] = "ribas1_on_tcr_S36_L004"

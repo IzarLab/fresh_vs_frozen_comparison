@@ -5,6 +5,9 @@ library(rlang)
 library(rlist)
 library(dplyr)
 
+### title: Create heatmap of top 10 markers in each seurat cluster for each dataset
+### author: Yiping Wang date: 11/08/2022
+
 #load list of folders for each datasets, depending on whether samples were processed by slyper protocol or not
 using_slyper = FALSE
 if (using_slyper) {

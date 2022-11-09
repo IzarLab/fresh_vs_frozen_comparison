@@ -3,6 +3,9 @@ library(ggplot2)
 library(rlist)
 library(grid)
 
+### title: Print out csv files of count matrices for spatial sequencing data for sequential cutaneous melanoma samples
+### author: Yiping Wang date: 11/08/2022
+
 #pats = c("MPM08_pre_slide","MPM08_on_slide","MPM08_on_later_slide")
 pats = c("MPM08_on_slide","MPM08_on_later_slide")
 

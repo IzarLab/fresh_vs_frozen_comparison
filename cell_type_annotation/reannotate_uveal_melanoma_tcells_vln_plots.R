@@ -7,6 +7,9 @@ library(viridis)
 library(scales)
 library(grid)
 
+### title: Plotting violin plots of T cell exhaustion signatures in integrated uveal melanoma metastatic T cell data
+### author: Yiping Wang date: 11/08/2022
+
 # colBP <- c('#A80D11', '#008DB8')
 # colSCSN <- c('#E1AC24', '#288F56')
 colDC <- c('#DE8C00', '#F564E3', '#7CAE00', '#00B4F0', '#00C08B')

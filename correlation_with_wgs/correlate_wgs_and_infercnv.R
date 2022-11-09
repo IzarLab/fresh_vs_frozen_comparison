@@ -7,6 +7,9 @@ library(stringr)
 library(ggplot2)
 library(infercnv)
 
+### title: Correlate average arm-level infercnv and whole-genome sequencing copy number alterations in uveal melanoma metastatic dataset
+### author: Yiping Wang date: 11/08/2022
+
 useRollingAverage = FALSE
 flattenToMedian = FALSE
 skipIndividualCalc = FALSE

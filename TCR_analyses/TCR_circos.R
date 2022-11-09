@@ -11,6 +11,9 @@ library(limma)
 library(reshape2)
 library(circlize)
 
+### title: Create circos plots showing overlap in TCR clonotypes between fresh and frozen samples in cutaneous melanoma, NSCLC, and uveal primary datasets
+### author: Yiping Wang date: 11/08/2022
+
 #load in sample names for either ribas dataset, or cutaneous melanoma, uveal primary, and NSCLC datasets
 #create array of colors corresponding to either fresh or frozen samples to label circos plots
 useRibas = FALSE

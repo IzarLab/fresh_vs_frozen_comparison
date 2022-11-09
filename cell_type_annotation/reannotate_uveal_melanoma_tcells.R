@@ -8,6 +8,9 @@ library(scales)
 library(grid)
 library(stringr)
 
+### title: Annotate T cells in uveal melanoma metastatic samples more finely
+### author: Yiping Wang date: 11/08/2022
+
 #load uveal melanoma data, subset to t-cells, and save to rds file
 seu = readRDS("/data/um_all_integrated.rds")
 seu <- subset(seu, manual_annotation_label %in% c("T-cells"))

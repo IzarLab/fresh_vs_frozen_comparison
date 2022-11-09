@@ -8,6 +8,9 @@ library(scales)
 library(grid)
 library(stringr)
 
+### title: Check whether two clusters in integrated uveal melanoma metastatic T-cells data are NK cells, by reclustering them
+### author: Yiping Wang date: 11/08/2022
+
 #load reintegrated data for uveal melanoma t cells, select 2 clusters with possible nk cell gene expression
 seu = readRDS(paste0("/data/reannotate_uveal_melanoma_tcells_reintegrated_with_1_subclustered_dim_num_25_then_15.rds"))
 

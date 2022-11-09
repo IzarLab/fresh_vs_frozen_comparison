@@ -5,6 +5,9 @@ library(rlang)
 library(rlist)
 library(dplyr)
 
+### title: Annotate cell types manually across all datasets based on Seurat clustering and marker gene expression
+### author: Yiping Wang date: 11/08/2022
+
 #load in BI5 cutaneous melanoma scrna and snrna-seq samples, integrate, cluster, and store in rds file
 integrate_BI5 = TRUE
 if (integrate_BI5) {

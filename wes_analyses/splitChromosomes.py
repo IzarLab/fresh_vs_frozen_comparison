@@ -1,3 +1,6 @@
+### title: Split a fastq file containing entire hg19 sequence into fastq files for each chromosome, for use by controlFREEC program
+### author: Yiping Wang date: 11/08/2022
+
 inFI = open("/data/Homo_sapiens_assembly19.fasta")
 firstline = True
 for line in inFI:

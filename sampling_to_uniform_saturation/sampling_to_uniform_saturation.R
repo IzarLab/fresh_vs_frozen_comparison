@@ -3,6 +3,9 @@ library(cellranger)
 library(rlist)
 library(Seurat)
 
+### title: Downsample UMI counts in cutaneous melanoma and NSCLC datasets, across both slyper and non-slyper protocols, to obtain comparable UMI counts across samples
+### author: Yiping Wang date: 11/08/2022
+
 patsList = list(c("CD45negGEXBI5_S1_L001","CD45posGEXBI5_S1_L001"),
   c("bi005-skcm-5snseq","bi005-skcm","skcm-bi005-5pv2-snseq"),
   c("UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-GEX-E12","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-GEX-F1","UMEL-CUUM1-SNRNA-5P-WI-PRIMARY-GEX-F12"),

@@ -1,3 +1,6 @@
+### title: Load lists of stress signature genes to calculate strength of these signatures across all datasets
+### author: Yiping Wang date: 11/08/2022
+
 #hardcoded list of stress signature genes, from either van den Brink 2017 or Denisenko 2020 papers
 stress_sig_dysfunctional_cd8 = c("LAG3","HAVCR2","PDCD1","PTMS","FAM3C","IFNG","AKAP5","CD7","PHLDA1","ENTPD1","SNAP47","TNS3","CXCL13","RDH10","DGKH","KIR2DL4","LYST","MIR155HG","RAB27A","CSF1","CTLA4","TNFRSF9","CD27","CCL3","ITGAE","PAG1","TNFRSF1B","GALNT1","GBP2","MYO7A")
 stress_sig_nmeth_celseq = c("FOS","HSPA1A","JUN","FOSB","JUNB","EGR1","HSPA1B","UBC","ZFP36","HSPB1","HSP90AA1","MT2","DNAJB1","BTG2","NR4A1","CEBPD","HSPA8","MT1","IER2","DNAJA1","SOCS3","ATF3","JUND","CEBPB","ID3","PPP1R15A","HSPE1","CXCL1","DUSP1","HSP90AB1","NFKBIA","HSPH1")

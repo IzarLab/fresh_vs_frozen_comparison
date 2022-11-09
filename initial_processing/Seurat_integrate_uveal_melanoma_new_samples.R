@@ -9,6 +9,8 @@ library(purrr)
 library(cowplot)
 library(stringr)
 
+### title: Seurat integration of uveal melanoma liver metastasis samples
+### author: Yiping Wang date: 11/08/2022
 
 outputnamearr = c("um_all_merged")#,"um_on_integrated","um_post_integrated","um_pre_integrated")
 pat_list_arr = list(c("um_07_gk_on_S8_L001","um_07_gk_pre_S4_L001","um_08_ar_on_S2_L001","um_08_ar_post_S3_L001","um_08_ar_pre_S1_L001","um_09_mw_on_S6_L001","um_09_mw_post_S7_L001","um_09_mw_pre_S5_L001","um_11_lc_on_S16_L002","um_11_lc_pre_S12_L002","um_12_ml_on_S10_L002","um_12_ml_post_S11_L002","um_12_ml_pre_S9_L002","um_15_lm_on_S14_L002","um_15_lm_post_S15_L002","um_15_lm_pre_S13_L002","um_16_rs_on_S18_L003","um_16_rs_post_S19_L003","um_16_rs_pre_S17_L003"))#,c("um_07_gk_on_S8_L001","um_08_ar_on_S2_L001","um_09_mw_on_S6_L001","um_11_lc_on_S16_L002","um_12_ml_on_S10_L002","um_15_lm_on_S14_L002","um_16_rs_on_S18_L003"),c("uv003_uvme_snseq_3p_post","um_08_ar_post_S3_L001","um_09_mw_post_S7_L001","um_12_ml_post_S11_L002","um_15_lm_post_S15_L002","um_16_rs_post_S19_L003"),c("um_07_gk_pre_S4_L001","um_08_ar_pre_S1_L001","um_09_mw_pre_S5_L001","um_11_lc_pre_S12_L002","um_12_ml_pre_S9_L002","um_15_lm_pre_S13_L002","um_16_rs_pre_S17_L003"))

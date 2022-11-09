@@ -4,6 +4,9 @@ library(stringr)
 library(rlang)
 library(rlist)
 
+### title: Plotting violin plots of quality metrics for cutaneous melanoma and NSCLC datasets, using data downsampled to obtain comparable UMI counts across samples
+### author: Yiping Wang date: 11/08/2022
+
 integrated_name_arr_underscore = c("BI5","NR1")
 integrated_name_arr = c("BI5","NR1")
 fresh_idents = c("CD45negGEXBI5_S1_L001","CD45posGEXBI5_S1_L001","NSCL_NR001_SCRNA_5P_NA_BRAIN_GEX")

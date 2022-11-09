@@ -10,6 +10,9 @@ library(stringr)
 library(rlist)
 library(scRepertoire)
 
+### title: Perform diffusion analysis for T-cells from cutaneous melanoma samples under therapy and uveal melanoma metastatic samples, and plot signatures of T-cell activation and exhaustion on diffusion maps
+### author: Yiping Wang date: 11/08/2022
+
 colDC <- c('#DE8C00', '#F564E3', '#7CAE00', '#00B4F0', '#00C08B')
 
 prefix_arr = c("cd8")#"treg_and_tfh","treg","tfh","cd4")#,"cd8")

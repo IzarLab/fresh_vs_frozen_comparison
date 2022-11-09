@@ -4,6 +4,9 @@ library(stringr)
 library(rlang)
 library(rlist)
 
+### title: Plotting violin plots of quality metrics for all datasets
+### author: Yiping Wang date: 11/08/2022
+
 #define list of s3 folders to download data from, names of each dataset, and alternate names that replace dashes with underscores
 foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
   "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",

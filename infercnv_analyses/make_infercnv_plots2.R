@@ -6,6 +6,9 @@ library(grid)
 library(rlist)
 library(stringr)
 
+### title: Make heatmap plots of infercnv results for all datasets
+### author: Yiping Wang date: 11/08/2022
+
 setwd("/data/")
 
 selectstep = 20

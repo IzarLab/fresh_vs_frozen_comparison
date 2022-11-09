@@ -19,6 +19,9 @@ library(SingleCellExperiment)
 library(scater)
 library(pheatmap)
 
+### title: Creation of Seurat object from Cellbender output, and doublet and QC thresholding, for uveal melanoma liver metastasis samples
+### author: Yiping Wang date: 11/08/2022
+
 #setwd("/home/ubuntu/")
 
 pats = c("uv003-uvme-snseq-3p-post")

@@ -4,6 +4,9 @@ library(Seurat)
 library(infercnv)
 library(stringr)
 
+### title: Create umaps of T cells with TCR clonality plotted in different colors according to frequency, for cutaneous melanoma, uveal melanoma primary, uveal melanoma metastasis, and sequential cutaneous melanoma samples under pembrolizumab therapy
+### author: Yiping Wang date: 11/08/2022
+
 #load list of rds objects corresponding to each dataset
 foldersList = c("",
   "",

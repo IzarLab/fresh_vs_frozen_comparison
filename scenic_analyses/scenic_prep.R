@@ -1,3 +1,6 @@
+### title: Print out csv files of count matrices for sequential cutaneous melanoma samples
+### author: Yiping Wang date: 11/08/2022
+
 system("aws s3 cp s3://melanoma-ribas/ribas1/Seurat/integrated/ribas_integrated_titrate_thresh_integrated.rds /data/ribas_integrated_titrate_thresh_integrated.rds")
 integrated_rds = readRDS("/data/ribas_integrated_titrate_thresh_integrated.rds")
 system("rm /data/ribas_integrated_titrate_thresh_integrated.rds")

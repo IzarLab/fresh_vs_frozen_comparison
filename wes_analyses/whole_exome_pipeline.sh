@@ -1,3 +1,6 @@
+### title: Download reference files for whole exome analysis, and whole exome sequencing fastq files for cutaneous melanoma sequential therapy samples, map fastq files to generate bam files, and run controlFREEC with these inputs
+### author: Yiping Wang date: 11/08/2022
+
 wget https://storage.googleapis.com/gatk-best-practices/somatic-b37/Homo_sapiens_assembly19.fasta Homo_sapiens_assembly19.fasta
 wget https://storage.googleapis.com/gatk-best-practices/somatic-b37/Homo_sapiens_assembly19.fasta.fai Homo_sapiens_assembly19.fasta.fai
 ~/hisat2-2.2.1/hisat2-build -p 16 Homo_sapiens_assembly19.fastq Homo_sapiens_assembly19

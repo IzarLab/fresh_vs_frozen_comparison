@@ -1,3 +1,6 @@
+### title: Rename sample IDs in rds objects across all datasets to human-readable format for plotting
+### author: Yiping Wang date: 11/08/2022
+
 #given a Seurat object integrated_rds and the name of a dataset, rename the orig.ident field of integrated_rds to more human-readable names
 rename_IDs <- function(integrated_rds, dataset_name) {
   if (dataset_name=="Mel" || dataset_name=="BI5")

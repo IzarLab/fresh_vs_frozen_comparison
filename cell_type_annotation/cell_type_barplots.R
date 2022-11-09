@@ -6,6 +6,9 @@ library(viridis)
 library(seriation)
 library(RColorBrewer)
 
+### title: Create barplots of cell type frequency, immune and non-immune simpson diversity, and malignant cell fractions
+### author: Yiping Wang date: 11/08/2022
+
 #load in folder names for each dataset
 useRibas = FALSE
 if (useRibas)

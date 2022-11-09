@@ -10,6 +10,9 @@ library(cowplot)
 library(stringr)
 #library(celldex)
 
+### title: Seurat integration of cutaneous melanoma, uveal melanoma primary, and nsclc samples
+### author: Yiping Wang date: 11/08/2022
+
 # foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
 #   "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",
 #   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",

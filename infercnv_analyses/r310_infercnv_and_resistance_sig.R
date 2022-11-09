@@ -10,6 +10,9 @@ library(infercnv)
 library(ggpubr)
 library(rlist)
 
+### title: Print heatmap of infercnv copy number changes, with histogram of immune resistance signature gene density overtop, for each sample in cutaneous melanoma sequential treatment dataset
+### author: Yiping Wang date: 11/08/2022
+
 #download object containing all ribas data from s3, subset to data for 310 sample
 system("aws s3 cp s3://melanoma-ribas/ribas1/Seurat/integrated/ribas_integrated_titrate_thresh_integrated.rds /data/ribas_integrated_titrate_thresh_integrated.rds")
 integrated_rds = readRDS("/data/ribas_integrated_titrate_thresh_integrated.rds")

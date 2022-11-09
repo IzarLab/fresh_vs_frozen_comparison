@@ -8,6 +8,9 @@ library(scales)
 library(grid)
 library(stringr)
 
+### title: Annotate T cells in cutaneous melanoma sequential samples more finely
+### author: Yiping Wang date: 11/08/2022
+
 recluster_ribas_tcells = TRUE
 recluster_ribas_myeloid = FALSE
 

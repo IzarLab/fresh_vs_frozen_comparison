@@ -2,6 +2,9 @@ library(rlist)
 library(ggplot2)
 library(stringr)
 
+### title: Correlate average arm-level infercnv copy numter alterations in fresh vs. Frozen samples in cutaneous melanoma, uveal primary, and NSCLC datasets
+### author: Yiping Wang date: 11/08/2022
+
 #define lists of sample names, folder locations, cancer cell type annotations, and fresh/frozen status
 patslist = list(c("CD45negGEXBI5_S1_L001_final_thresh","bi005-skcm-5snseq_final_thresh","skcm-bi005-5pv2-snseq_final_thresh"),c("UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-GEX-E12_final_thresh","UMEL-CUUM1-SCRNA-5P-NA-PRIMARY-GEX-F1_final_thresh","UMEL-CUUM1-SNRNA-5P-WI-PRIMARY-GEX-F12_final_thresh"),c("NSCL_NR001_SCRNA_5P_NA_BRAIN_GEX_final_thresh","NSCL_NR001_SNSEQ_5P_NI_BRAIN_GEX_final_thresh","NSCL_NR001_SNSEQ_5P_WI_BRAIN_GEX_final_thresh","NSCL-NR001-5pv2-snseq_final_thresh"),c("Sarcoma167GEX_final_thresh","Sarcoma322GEX_final_thresh","Sarcoma559GEX_final_thresh","Sarcoma708GEX_final_thresh"))
 

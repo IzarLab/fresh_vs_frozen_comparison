@@ -7,6 +7,9 @@ library(rlist)
 library(fgsea)
 library(stringr)
 
+### title: Determine regulators from scenic analysis that are differentially expressed in clone 2 of sequential cutaneous melanoma dataset
+### author: Yiping Wang date: 11/08/2022
+
 pats = c("ribas_310_on_GEX_5pv2_S27_L004_titrate_thresh_kmeans","ribas_310_on_later_previd_3_GEX_titrate_thresh_kmeans","ribas_310_pre_GEX_5pv2_S26_L004_titrate_thresh_kmeans")
 cbpats = c("ribas_310_on_GEX_5pv2_S27_L004_titrate_thresh","ribas_310_on_later_previd_3_GEX_titrate_thresh","ribas_310_pre_GEX_5pv2_S26_L004_titrate_thresh")
 shortpats = c("on","on_later","pre")

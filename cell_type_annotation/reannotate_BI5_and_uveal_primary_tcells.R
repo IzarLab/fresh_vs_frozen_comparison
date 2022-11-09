@@ -9,6 +9,9 @@ library(grid)
 library(stringr)
 library(dplyr)
 
+### title: Annotate T cells in cutaneous melanoma sequential samples more finely
+### author: Yiping Wang date: 11/08/2022
+
 #define folder locations for cutaneous melanoma and uveal primary data
 foldersList = c("",
   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata")

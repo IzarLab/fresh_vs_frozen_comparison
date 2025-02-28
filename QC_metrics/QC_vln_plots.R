@@ -7,7 +7,8 @@ library(rlist)
 ### title: Plotting violin plots of quality metrics for all datasets
 ### author: Yiping Wang date: 11/08/2022
 
-#define list of s3 folders to download data from, names of each dataset, and alternate names that replace dashes with underscores
+#define list of s3 folders to download data from, names of each dataset, 
+#and alternate names that replace dashes with underscores
 foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
   "s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq",
   "s3://fresh-vs-frozen-comparison-ohio/cpoi-uvealprimarydata",
@@ -16,10 +17,18 @@ foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
   "s3://uveal-melanoma",
   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-integrated_name_arr = c("BI5_scrna-seq","BI5_snrna-seq","cpoi-uvealprimarydata","nsclc","ribas_integrated_titrate_thresh","um_all","BI5","NR1")
-integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC","ribas","UMEL","BI5","NR1")
+integrated_name_arr = c("BI5_scrna-seq",
+                        "BI5_snrna-seq",
+                        "cpoi-uvealprimarydata",
+                        "nsclc","ribas_integrated_titrate_thresh",
+                        "um_all",
+                        "BI5",
+                        "NR1")
+integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC",
+                                   "ribas","UMEL","BI5","NR1")
 
-#set options for using downsampled data from s3, and showing all stress signatures versus just one
+#set options for using downsampled data from s3, and showing all stress signatures 
+#versus just one
 use_downsampled = FALSE
 possible_downsampled_suffix = ""
 if (use_downsampled) {
@@ -31,8 +40,10 @@ if (show_all_stress_sigs) {
   heightParam = 21
 }
 
-#read in table of ensembl gene ids mapped to hgnc ids, remove ensembl ids that map to more than one hgnc id
-ensembl_gene_to_hgnc = read.table("mart_export_ensembl_gene_to_hgnc.txt",quote=NULL,header=T,sep="\t")
+#read in table of ensembl gene ids mapped to hgnc ids, remove ensembl ids 
+#that map to more than one hgnc id
+ensembl_gene_to_hgnc = read.table("mart_export_ensembl_gene_to_hgnc.txt",
+                                  quote=NULL,header=T,sep="\t")
 dup_ids_temp = table(ensembl_gene_to_hgnc$HGNC_symbol)
 dup_ids = names(dup_ids_temp)[dup_ids_temp>1]
 ensembl_gene_to_hgnc = subset(ensembl_gene_to_hgnc, !(HGNC_symbol %in% dup_ids))
@@ -42,7 +53,8 @@ ensembl_gene_to_hgnc[["HGNC_symbol"]] = NULL
 #load in stress signature genes
 source("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_comparison/QC_metrics/load_stress_sigs.R")
 
-#either show all stress signature results, or just results from nature methods paper for celseq
+#either show all stress signature results, or just results from nature methods 
+#paper for celseq
 if (show_all_stress_sigs) {
   stress_sigs_to_plot = stress_sig_names
 } else {
@@ -54,7 +66,8 @@ ribas_ifng_sig = read.table("ribas_ifng_sig.txt", header = F, sep = ",")
 stress_sig_list = list.append(stress_sig_list, ribas_ifng_sig)
 names(stress_sig_list)[length(stress_sig_list)] = "ribas_ifng_sig"
 stress_sig_list_orig = stress_sig_list
-#if using downsampled data, and therefore measuring ribas stress signature, change ensembl gene ids to hgnc
+#if using downsampled data, and therefore measuring ribas stress signature, 
+#change ensembl gene ids to hgnc
 if (use_downsampled)
 {
   for (stress_sig in names(stress_sig_list))
@@ -81,11 +94,13 @@ object.list = c()
 for (i in 1:2) {
   if (use_downsampled)
   {
-    system(paste0("aws s3 cp ",foldersList[i],"/Seurat_downsampled/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    system(paste0("aws s3 cp ",foldersList[i],"/Seurat_downsampled/integrated/",
+                  integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
   }
   else
   {
-    system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",
+                  integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
   }
   integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
   DefaultAssay(integrated_rds) = "RNA"

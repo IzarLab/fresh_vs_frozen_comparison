@@ -7,6 +7,10 @@ library(rlist)
 ### title: Plotting violin plots of quality metrics for all datasets
 ### author: Yiping Wang date: 11/08/2022
 
+homeFolder = "/mnt/vdb/home/ubuntu2"
+codeFolder = paste0(homeFolder,"/fresh_vs_frozen_comparison")
+outputFolder = paste0(homeFolder,"/fresh_vs_frozen_comparison_QC")
+
 #define list of s3 folders to download data from, names of each dataset, 
 #and alternate names that replace dashes with underscores
 foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
@@ -17,18 +21,24 @@ foldersList = c("s3://fresh-vs-frozen-comparison-ohio/BI5/scrna-seq",
   "s3://uveal-melanoma",
   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline",
   "s3://fresh-vs-frozen-comparison-ohio/slyper_pipeline")
-integrated_name_arr = c("BI5_scrna-seq",
+int_names = c("BI5_scrna-seq",
                         "BI5_snrna-seq",
                         "cpoi-uvealprimarydata",
                         "nsclc","ribas_integrated_titrate_thresh",
                         "um_all",
                         "BI5",
                         "NR1")
-integrated_name_arr_underscore = c("Mel_scrna_seq","Mel_snrna_seq","UM","NSCLC",
-                                   "ribas","UMEL","BI5","NR1")
+int_names_underscore = c("Mel_scrna_seq",
+                                "Mel_snrna_seq",
+                                "UM",
+                                "NSCLC",
+                                "ribas",
+                                "UMEL",
+                                "BI5",
+                                "NR1")
 
-#set options for using downsampled data from s3, and showing all stress signatures 
-#versus just one
+#set options for using downsampled data from s3, 
+#and showing all stress signatures versus just one
 use_downsampled = FALSE
 possible_downsampled_suffix = ""
 if (use_downsampled) {
@@ -40,8 +50,8 @@ if (show_all_stress_sigs) {
   heightParam = 21
 }
 
-#read in table of ensembl gene ids mapped to hgnc ids, remove ensembl ids 
-#that map to more than one hgnc id
+#read in table of ensembl gene ids mapped to hgnc ids, 
+#remove ensembl ids that map to more than one hgnc id
 ensembl_gene_to_hgnc = read.table("mart_export_ensembl_gene_to_hgnc.txt",
                                   quote=NULL,header=T,sep="\t")
 dup_ids_temp = table(ensembl_gene_to_hgnc$HGNC_symbol)
@@ -51,10 +61,10 @@ rownames(ensembl_gene_to_hgnc) = ensembl_gene_to_hgnc[["HGNC_symbol"]]
 ensembl_gene_to_hgnc[["HGNC_symbol"]] = NULL
 
 #load in stress signature genes
-source("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_comparison/QC_metrics/load_stress_sigs.R")
+source(paste0(codeFolder,"/QC_metrics/load_stress_sigs.R"))
 
-#either show all stress signature results, or just results from nature methods 
-#paper for celseq
+#either show all stress signature results,
+#or just results from nature methods paper for celseq
 if (show_all_stress_sigs) {
   stress_sigs_to_plot = stress_sig_names
 } else {
@@ -66,6 +76,7 @@ ribas_ifng_sig = read.table("ribas_ifng_sig.txt", header = F, sep = ",")
 stress_sig_list = list.append(stress_sig_list, ribas_ifng_sig)
 names(stress_sig_list)[length(stress_sig_list)] = "ribas_ifng_sig"
 stress_sig_list_orig = stress_sig_list
+
 #if using downsampled data, and therefore measuring ribas stress signature, 
 #change ensembl gene ids to hgnc
 if (use_downsampled)
@@ -92,34 +103,49 @@ cell_type_total_features = c()
 #load data for BI5 scrna and snrna-seq samples, calculate stress signatures
 object.list = c()
 for (i in 1:2) {
+  int_local_rds = paste0("/data/",
+                         int_names[i],
+                         "_integrated.rds")
   if (use_downsampled)
   {
-    system(paste0("aws s3 cp ",foldersList[i],"/Seurat_downsampled/integrated/",
-                  integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    int_s3_rds = paste0(foldersList[i],
+                        "/Seurat_downsampled/integrated/",
+                        int_names[i],
+                        "_integrated.rds")
   }
   else
   {
-    system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",
-                  integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    int_s3_rds = paste0(foldersList[i],
+                        "/Seurat/integrated/",
+                        int_names[i],
+                        "_integrated.rds")
   }
-  integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
-  DefaultAssay(integrated_rds) = "RNA"
+  system(paste0("aws s3 cp ",
+                int_s3_rds,
+                " ",
+                int_local_rds))
+  int_obj = readRDS(int_local_rds)
+  DefaultAssay(int_obj) = "RNA"
   for (stress_sig in names(stress_sig_list))
   {
-    integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_list[[stress_sig]])), name = stress_sig, assay = "RNA", search = T)
+    int_obj = AddModuleScore(int_obj, 
+                             features = list(na.omit(stress_sig_list[[stress_sig]])), 
+                             name = stress_sig, 
+                             assay = "RNA", search = T)
   }
-  object.list = c(object.list, integrated_rds)
+  object.list = c(object.list, int_obj)
 }
 
 #merge together BI5 scrna and snrna-seq samples
 source("merge.SCTAssay.R")
 seu = merge.SCTAssay(x=object.list[1], y=object.list[2], merge.data = T, na.rm = T)
 
-pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/Mel_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=heightParam,width=5.5*length(unique(seu$orig.ident)))
+pdf(paste0(outputFolder,"/Mel_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),
+    height=heightParam,width=5.5*length(unique(seu$orig.ident)))
 
 #rename BI5 sample names to shorter names for display in figure, add description of whether they are fresh or frozen
 uniqueidents = unique(seu$orig.ident)
-source("fresh_vs_frozen_comparison/QC_metrics/rename_sample_IDs.R")
+source(paste0(codeFolder,"/QC_metrics/rename_sample_IDs.R"))
 seu = rename_IDs(seu,"Mel")
 
 seu$orig.ident = paste0(seu$orig.ident,"\n(",seu$fresh_frozen,")")
@@ -134,11 +160,13 @@ for (stress_sig in names(stress_sig_list))
   eval(parse(text=paste0("seu$Mel_",stress_sig,"1 = seu$",stress_sig,"1")))
 }
 
-#prepend either 1 or 2 to sample names, depending on fresh/frozen status, to ensure that fresh samples are displayed first
+#prepend either 1 or 2 to sample names, depending on fresh/frozen status, 
+#to ensure that fresh samples are displayed first
 seu$orig.ident[seu$fresh_frozen=="fresh"] = paste0("1_",seu$orig.ident[seu$fresh_frozen=="fresh"])
 seu$orig.ident[seu$fresh_frozen=="frozen"] = paste0("2_",seu$orig.ident[seu$fresh_frozen=="frozen"])
 
-#clip off 1 or 2 from sample names, to create array of labels that will actually be displayed in figure
+#clip off 1 or 2 from sample names, 
+#to create array of labels that will actually be displayed in figure
 relabel_list = unique(seu$orig.ident)
 names(relabel_list) = relabel_list
 for (i in 1:length(relabel_list))
@@ -147,7 +175,8 @@ for (i in 1:length(relabel_list))
 }
 
 #violin plot figure, using manually encoded upper limits for violins, and fresh samples colored blue, frozen red
-aplot = VlnPlot(seu, features = c("Mel_nFeature_RNA","Mel_percent.mt",paste0("Mel_",stress_sigs_to_plot,"1")), group.by = "orig.ident",pt.size = 0)# + geom_boxplot()
+aplot = VlnPlot(seu, features = c("Mel_nFeature_RNA","Mel_percent.mt",paste0("Mel_",stress_sigs_to_plot,"1")), 
+                group.by = "orig.ident",pt.size = 0)# + geom_boxplot()
 uniqueidents = unique(seu$orig.ident)
 ymax_arr = c(13000,25,3)
 ylabs_arr = c("# detected genes/cell","percent mitochondrial reads","expression of signature")
@@ -155,7 +184,9 @@ for (z2 in 1:(2+length(stress_sigs_to_plot))) {
   colorsarr = rep("",length(uniqueidents))
   colorsarr[grep("fresh",uniqueidents)] = "blue"
   colorsarr[grep("frozen",uniqueidents)] = "red"
-  aplot[[z2]] = aplot[[z2]] + scale_fill_manual(values = colorsarr, limits = uniqueidents) + scale_x_discrete(labels = relabel_list) + ylim(0,ymax_arr[z2]) + ylab(ylabs_arr[z2]) + theme(axis.text.x = element_text(angle=0, hjust=0.5)) + geom_boxplot(fill="white",width=0.1)
+  aplot[[z2]] = aplot[[z2]] + scale_fill_manual(values = colorsarr, limits = uniqueidents) + 
+    scale_x_discrete(labels = relabel_list) + ylim(0,ymax_arr[z2]) + ylab(ylabs_arr[z2]) + 
+    theme(axis.text.x = element_text(angle=0, hjust=0.5)) + geom_boxplot(fill="white",width=0.1)
 }
 AugmentPlot(aplot, dpi = 300)
 print(aplot)
@@ -174,9 +205,12 @@ for (i in 1:length(fresh_ids))
 {
   for (j in 1:length(frozen_ids))
   {
-    test1 = wilcox.test(seu$nFeature_RNA[seu$orig.ident==fresh_ids[i]],seu$nFeature_RNA[seu$orig.ident==frozen_ids[j]])
-    test2 = wilcox.test(seu$percent.mt[seu$orig.ident==fresh_ids[i]],seu$percent.mt[seu$orig.ident==frozen_ids[j]])
-    test3 = wilcox.test(seu$stress_sig_nmeth_celseq1[seu$orig.ident==fresh_ids[i]],seu$stress_sig_nmeth_celseq1[seu$orig.ident==frozen_ids[j]])
+    test1 = wilcox.test(seu$nFeature_RNA[seu$orig.ident==fresh_ids[i]],
+                        seu$nFeature_RNA[seu$orig.ident==frozen_ids[j]])
+    test2 = wilcox.test(seu$percent.mt[seu$orig.ident==fresh_ids[i]],
+                        seu$percent.mt[seu$orig.ident==frozen_ids[j]])
+    test3 = wilcox.test(seu$stress_sig_nmeth_celseq1[seu$orig.ident==fresh_ids[i]],
+                        seu$stress_sig_nmeth_celseq1[seu$orig.ident==frozen_ids[j]])
     testarr1 = c(test1$p.value, test2$p.value, test3$p.value)
     names(testarr1) = c("nfeature test","percentmt test","stress sig test")
     testarr = list.append(testarr, testarr1)
@@ -195,21 +229,26 @@ uniqueidents = unique(seu$orig.ident)
 for (uniqueident in uniqueidents)
 {
   print(uniqueident)
-  tempdf = data.frame(ident=uniqueident, stat="median_nFeature_RNA", value=median(seu$nFeature_RNA[seu$orig.ident==uniqueident]))
+  tempdf = data.frame(ident=uniqueident, stat="median_nFeature_RNA", 
+                      value=median(seu$nFeature_RNA[seu$orig.ident==uniqueident]))
   qualitydf = rbind(qualitydf, tempdf)
-  tempdf = data.frame(ident=uniqueident, stat="median_percent.mt", value=median(seu$percent.mt[seu$orig.ident==uniqueident]))
+  tempdf = data.frame(ident=uniqueident, stat="median_percent.mt", 
+                      value=median(seu$percent.mt[seu$orig.ident==uniqueident]))
   qualitydf = rbind(qualitydf, tempdf)
-  tempdf = data.frame(ident=uniqueident, stat="median_stress_sig", value=median(seu$stress_sig_nmeth_celseq1[seu$orig.ident==uniqueident]))
+  tempdf = data.frame(ident=uniqueident, stat="median_stress_sig", 
+                      value=median(seu$stress_sig_nmeth_celseq1[seu$orig.ident==uniqueident]))
   qualitydf = rbind(qualitydf, tempdf)
 }
 
 seu = readRDS("/data/fresh_vs_frozen_all_reannotate_BI5.rds")
 for (stress_sig in names(stress_sig_list))
 {
-  seu = AddModuleScore(seu, features = list(na.omit(stress_sig_list[[stress_sig]])), name = stress_sig, assay = "RNA", search = T)
+  seu = AddModuleScore(seu, features = list(na.omit(stress_sig_list[[stress_sig]])), 
+                       name = stress_sig, assay = "RNA", search = T)
 }
 
-#calculate QC median metrics for each cell type in rds object, as well as for all non-tumor cells generally
+#calculate QC median metrics for each cell type in rds object, 
+#as well as for all non-tumor cells generally
 for (an_orig_ident in unique(seu$orig.ident)) {
   seu_sub = subset(seu, orig.ident==an_orig_ident)
   cell_types_arr = unique(seu_sub$manual_annotation_label)
@@ -225,19 +264,24 @@ for (an_orig_ident in unique(seu$orig.ident)) {
     {
       seu_sub2 = subset(seu_sub, manual_annotation_label==a_cell_type)
     }
-    cell_type_median_features = c(cell_type_median_features, median(seu_sub2$nFeature_RNA))
+    cell_type_median_features = c(cell_type_median_features, 
+                                  median(seu_sub2$nFeature_RNA))
     names(cell_type_median_features)[length(cell_type_median_features)] = paste0(an_orig_ident,"_",a_cell_type)
 
-    cell_type_median_counts = c(cell_type_median_counts, median(seu_sub2$nCount_RNA))
+    cell_type_median_counts = c(cell_type_median_counts, 
+                                median(seu_sub2$nCount_RNA))
     names(cell_type_median_counts)[length(cell_type_median_counts)] = paste0(an_orig_ident,"_",a_cell_type)
 
-    cell_type_median_percentmt = c(cell_type_median_percentmt, median(seu_sub2$percent.mt))
+    cell_type_median_percentmt = c(cell_type_median_percentmt, 
+                                   median(seu_sub2$percent.mt))
     names(cell_type_median_percentmt)[length(cell_type_median_percentmt)] = paste0(an_orig_ident,"_",a_cell_type)
 
-    cell_type_median_stress_sig = c(cell_type_median_stress_sig, median(seu_sub2$stress_sig_nmeth_celseq1))
+    cell_type_median_stress_sig = c(cell_type_median_stress_sig, 
+                                    median(seu_sub2$stress_sig_nmeth_celseq1))
     names(cell_type_median_stress_sig)[length(cell_type_median_stress_sig)] = paste0(an_orig_ident,"_",a_cell_type)
 
-    cell_type_total_features = c(cell_type_total_features, sum(rowSums(seu_sub2@assays$RNA@counts)!=0))
+    cell_type_total_features = c(cell_type_total_features, 
+                                 sum(rowSums(seu_sub2@assays$RNA@counts)!=0))
     names(cell_type_total_features)[length(cell_type_total_features)] = paste0(an_orig_ident,"_",a_cell_type)
   }
 }
@@ -259,20 +303,20 @@ source("merge.SCTAssay.R")
 for (i in 3:(length(foldersList))) {
   if (use_downsampled)
   {
-    system(paste0("aws s3 cp ",foldersList[i],"/Seurat_downsampled/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    system(paste0("aws s3 cp ",foldersList[i],"/Seurat_downsampled/integrated/",int_names[i],"_integrated.rds /data/",int_names[i],"_integrated.rds"))
   }
   else
   {
-    system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",integrated_name_arr[i],"_integrated.rds /data/",integrated_name_arr[i],"_integrated.rds"))
+    system(paste0("aws s3 cp ",foldersList[i],"/Seurat/integrated/",int_names[i],"_integrated.rds /data/",int_names[i],"_integrated.rds"))
   }
-  integrated_rds = readRDS(paste0("/data/",integrated_name_arr[i],"_integrated.rds"))
+  integrated_rds = readRDS(paste0("/data/",int_names[i],"_integrated.rds"))
 
-  if (integrated_name_arr_underscore[i]=="NR1" || integrated_name_arr_underscore[i]=="BI5")
+  if (int_names_underscore[i]=="NR1" || int_names_underscore[i]=="BI5")
   {
     integrated_rds$fresh_frozen = "frozen"
   }
 
-  if (integrated_name_arr[i]=="BI5")
+  if (int_names[i]=="BI5")
   {
     integrated_rds = subset(integrated_rds, (orig.ident=="BI5CST" | orig.ident=="BI5TST"))
     #system("aws s3 cp s3://fresh-vs-frozen-comparison-ohio/BI5/snrna-seq/Seurat/bi005-skcm_final_thresh/bi005-skcm_final_thresh_cb.rds /data/bi005-skcm_final_thresh_cb.rds")
@@ -289,7 +333,7 @@ for (i in 3:(length(foldersList))) {
     integrated_rds = merge.SCTAssay(x=integrated_rds, y=bi5obj, merge.data = T, na.rm = T)
   }
 
-  if (integrated_name_arr[i]=="NR1")
+  if (int_names[i]=="NR1")
   {
     integrated_rds = subset(integrated_rds, (orig.ident=="NR1CST" | orig.ident=="NR1TST"))
     #system("aws s3 cp s3://fresh-vs-frozen-comparison-ohio/nsclc/Seurat/NSCL_NR001_SNSEQ_3P_NI_BRAIN_GEX_final_thresh/NSCL_NR001_SNSEQ_3P_NI_BRAIN_GEX_final_thresh_cb.rds /data/NSCL_NR001_SNSEQ_3P_NI_BRAIN_GEX_final_thresh_cb.rds")
@@ -311,24 +355,24 @@ for (i in 3:(length(foldersList))) {
   {
     integrated_rds$fresh_frozen = "frozen"
   }
-  if (integrated_name_arr[i]=="nsclc" || integrated_name_arr[i]=="NR1")
+  if (int_names[i]=="nsclc" || int_names[i]=="NR1")
   {
     integrated_rds$fresh_frozen[integrated_rds$fresh_frozen=="5pv2-snseq"] = "frozen"
   }
 
   #for ribas samples, only look at sample 310
-  if (integrated_name_arr_underscore[i]=="ribas")
+  if (int_names_underscore[i]=="ribas")
   {
     integrated_rds$placeholder = FALSE
     integrated_rds$placeholder[grep("310",integrated_rds$orig.ident)] = TRUE
     integrated_rds = subset(integrated_rds, placeholder)
   }
 
-  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=heightParam,width=5.5*length(unique(integrated_rds$orig.ident)))
+  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",int_names_underscore[i],"_fresh_vs_frozen_QC",possible_downsampled_suffix,".pdf"),height=heightParam,width=5.5*length(unique(integrated_rds$orig.ident)))
 
   uniqueidents = unique(integrated_rds$orig.ident)
   source("fresh_vs_frozen_comparison/QC_metrics/rename_sample_IDs.R")
-  integrated_rds = rename_IDs(integrated_rds,integrated_name_arr_underscore[i])
+  integrated_rds = rename_IDs(integrated_rds,int_names_underscore[i])
 
   integrated_rds$orig.ident = paste0(integrated_rds$orig.ident,"\n(",integrated_rds$fresh_frozen,")")
   for (stress_sig in names(stress_sig_list))
@@ -336,13 +380,13 @@ for (i in 3:(length(foldersList))) {
     integrated_rds = AddModuleScore(integrated_rds, features = list(na.omit(stress_sig_list[[stress_sig]])), name = stress_sig, assay = "RNA", search = T)
   }
 
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_nCount_RNA = integrated_rds$nCount_RNA")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_nFeature_RNA = integrated_rds$nFeature_RNA")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_ScrubDoublet_score = integrated_rds$ScrubDoublet_score")))
-  eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_percent.mt = integrated_rds$percent.mt")))
+  eval(parse(text=paste0("integrated_rds$",int_names_underscore[i],"_nCount_RNA = integrated_rds$nCount_RNA")))
+  eval(parse(text=paste0("integrated_rds$",int_names_underscore[i],"_nFeature_RNA = integrated_rds$nFeature_RNA")))
+  eval(parse(text=paste0("integrated_rds$",int_names_underscore[i],"_ScrubDoublet_score = integrated_rds$ScrubDoublet_score")))
+  eval(parse(text=paste0("integrated_rds$",int_names_underscore[i],"_percent.mt = integrated_rds$percent.mt")))
   for (stress_sig in names(stress_sig_list))
   {
-    eval(parse(text=paste0("integrated_rds$",integrated_name_arr_underscore[i],"_",stress_sig,"1 = integrated_rds$",stress_sig,"1")))
+    eval(parse(text=paste0("integrated_rds$",int_names_underscore[i],"_",stress_sig,"1 = integrated_rds$",stress_sig,"1")))
   }
 
   if (sum(integrated_rds$fresh_frozen=="fresh")!=0)
@@ -358,7 +402,7 @@ for (i in 3:(length(foldersList))) {
     relabel_list[i1] = substring(relabel_list[i1],3)
   }
 
-  aplot = VlnPlot(integrated_rds, features = c(paste0(integrated_name_arr_underscore[i],"_nFeature_RNA"),paste0(integrated_name_arr_underscore[i],"_percent.mt"),paste0(integrated_name_arr_underscore[i],"_",stress_sigs_to_plot,"1")), group.by = "orig.ident",pt.size = 0)
+  aplot = VlnPlot(integrated_rds, features = c(paste0(int_names_underscore[i],"_nFeature_RNA"),paste0(int_names_underscore[i],"_percent.mt"),paste0(int_names_underscore[i],"_",stress_sigs_to_plot,"1")), group.by = "orig.ident",pt.size = 0)
   uniqueidents = sort(unique(integrated_rds$orig.ident))
   ymax_arr = c(13000,25,3)
   ylabs_arr = c("# detected genes/cell","percent mitochondrial reads","expression of signature")
@@ -368,39 +412,39 @@ for (i in 3:(length(foldersList))) {
     colorsarr[grep("fresh",uniqueidents)] = "blue"
     colorsarr[grep("frozen",uniqueidents)] = "red"
     #label 3p sample in UMEL dataset as yellow
-    if (integrated_name_arr[i]=="um_all")
+    if (int_names[i]=="um_all")
     {
       colorsarr[grep("UMEL_1_3",uniqueidents)] = "yellow"
     }
-    if (integrated_name_arr[i]=="BI5")
+    if (int_names[i]=="BI5")
     {
       colorsarr[grep("BI5CST",uniqueidents)] = "green"
       colorsarr[grep("BI5TST",uniqueidents)] = "green"
     }
-    if (integrated_name_arr[i]=="NR1")
+    if (int_names[i]=="NR1")
     {
       colorsarr[grep("NR1CST",uniqueidents)] = "green"
       colorsarr[grep("NR1TST",uniqueidents)] = "green"
     }
     #reorder nsclc and ribas samples, so that fresh samples are plotted first
-    if (integrated_name_arr[i]=="nsclc" || integrated_name_arr[i]=="ribas_integrated_titrate_thresh" || integrated_name_arr[i]=="BI5" || integrated_name_arr[i]=="NR1")
+    if (int_names[i]=="nsclc" || int_names[i]=="ribas_integrated_titrate_thresh" || int_names[i]=="BI5" || int_names[i]=="NR1")
     {
-      if (integrated_name_arr[i]=="nsclc")
+      if (int_names[i]=="nsclc")
       {
 	uniqueidents_reorder = uniqueidents
 	uniqueidents_reorder = uniqueidents_reorder[c(1,6,2,3,4,5)]
       }
-      if (integrated_name_arr[i]=="ribas_integrated_titrate_thresh")
+      if (int_names[i]=="ribas_integrated_titrate_thresh")
       {
 	uniqueidents_reorder = uniqueidents
 	uniqueidents_reorder = uniqueidents_reorder[c(3,1,2)]
       }
-      if (integrated_name_arr[i]=="BI5")
+      if (int_names[i]=="BI5")
       {
 	uniqueidents_reorder = uniqueidents
 	uniqueidents_reorder = uniqueidents_reorder[c(1,2,5,6,7,3,4)]
       }
-      if (integrated_name_arr[i]=="NR1")
+      if (int_names[i]=="NR1")
       {
 	uniqueidents_reorder = uniqueidents
 	uniqueidents_reorder = uniqueidents_reorder[c(1,8,4,5,6,7,2,3)]
@@ -415,7 +459,7 @@ for (i in 3:(length(foldersList))) {
   AugmentPlot(aplot, dpi = 300)
   print(aplot)
 
-  system(paste0("rm /data/",integrated_name_arr[i],"_integrated.rds"))
+  system(paste0("rm /data/",int_names[i],"_integrated.rds"))
 
   atable = table(integrated_rds$orig.ident)
   adf = data.frame(sample = names(atable), count = atable)
@@ -446,7 +490,7 @@ for (i in 3:(length(foldersList))) {
   }
   dev.off()
 
-  print(integrated_name_arr[i])
+  print(int_names[i])
   uniqueidents = unique(integrated_rds$orig.ident)
   for (uniqueident in uniqueidents)
   {
@@ -492,18 +536,18 @@ for (i in 3:(length(foldersList))) {
   }
 
   integrated_rds$orig.ident.bare = unlist(lapply(strsplit(str_sub(integrated_rds$orig.ident,start=3),"\n"), function(x) {x[[1]][1]}))
-  if (integrated_name_arr_underscore[i]=="BI5")
+  if (int_names_underscore[i]=="BI5")
   {
     integrated_rds$temparr = (integrated_rds$orig.ident.bare=="BI5CST" | integrated_rds$orig.ident.bare=="BI5TST")
     integrated_rds = subset(integrated_rds, temparr)
   }
-  if (integrated_name_arr_underscore[i]=="NR1")
+  if (int_names_underscore[i]=="NR1")
   {
     integrated_rds$temparr = (integrated_rds$orig.ident.bare=="NR1CST" | integrated_rds$orig.ident.bare=="NR1TST")
     integrated_rds = subset(integrated_rds, temparr)
   }
   integrated_rds$cell_type_and_sample = paste0(integrated_rds$orig.ident.bare,"\n",integrated_rds$manual_annotation_label)
-  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",integrated_name_arr_underscore[i],"_cell_type_QC.pdf"),height=3*heightParam,width=3*length(unique(integrated_rds$cell_type_and_sample)))
+  pdf(paste0("/mnt/vdb/home/ubuntu2/fresh_vs_frozen_QC/",int_names_underscore[i],"_cell_type_QC.pdf"),height=3*heightParam,width=3*length(unique(integrated_rds$cell_type_and_sample)))
   aplot = VlnPlot(integrated_rds, features = c("nFeature_RNA", "percent.mt", paste0(stress_sigs_to_plot,"1")), group.by = "cell_type_and_sample", pt.size = 0, ncol=1)
   for (z2 in 1:3)
   {

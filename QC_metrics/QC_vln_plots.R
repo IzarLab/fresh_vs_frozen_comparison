@@ -249,6 +249,23 @@ for (stress_sig in names(stress_sig_list))
 
 #calculate QC median metrics for each cell type in rds object, 
 #as well as for all non-tumor cells generally
+QC_df = data.frame(orig.ident = seu$orig.ident,
+                   cell_type = seu$manual_annotation_label,
+                   nFeature_RNA = seu$nFeature_RNA,
+                   nCount_RNA = seu$nCount_RNA,
+                   percent.mt = seu$percent.mt,
+                   stress_sig = seu$stress_sig_nmeth_celseq1)
+
+QC_df_cell_type_comp <- QC_df %>%
+  group_by(orig.ident, cell_type) %>%
+  summarise(
+    median_features = median(nFeature_RNA),
+    median_counts = median(nCount_RNA),
+    median_percent_mt = median(percent.mt),
+    median_stress_sig = median(stress_sig),
+    total_features = sum(nFeature_RNA)
+  )
+
 for (an_orig_ident in unique(seu$orig.ident)) {
   seu_sub = subset(seu, orig.ident==an_orig_ident)
   cell_types_arr = unique(seu_sub$manual_annotation_label)
